@@ -3,27 +3,28 @@ import requests
 import pandas as pd
 from supabase import create_client, Client
 from jobspy import scrape_jobs
-from google.generativeai import configure, GenerativeModel
+from google import genai
+
 
 url: str = os.environ.get("SUPABASE_URL")
 key: str = os.environ.get("SUPABASE_KEY")
 supabase: Client = create_client(url, key)
 
-configure(api_key=os.environ.get("GEMINI_API_KEY"))
-llm = GenerativeModel('gemini-3-flash')
+client = genai.Client()
 
 def get_seen_jobs():
-    response = supabase.table('seen_jobs').select('job_id').execute()
+
+    response = supabase.table('seen_job').select('job_id').execute()
     return {row['job_id'] for row in response.data}
 
 def save_seen_jobs(job_ids):
     data = [{"job_id": jid} for jid in job_ids]
     if data:
-        supabase.table('seen_jobs').insert(data).execute()
+        supabase.table('seen_job').insert(data).execute()
 
 def send_to_google_sheet(message_text):
     form_url = os.environ.get("GOOGLE_FORM_URL") 
-    entry_id = os.environ.get("GOOGLE_ENTRY_ID") 
+    entry_id = os.environ.get("GOOGLE_ENTRY_ID")
     
     payload = {entry_id: message_text}
     
@@ -67,9 +68,12 @@ def main():
     Data: {top_10}
     """
     
-    formatted_message = llm.generate_content(prompt).text
+    response = client.models.generate_content(
+        model='gemini-3-flash',
+        contents=prompt
+    )
     
-    send_to_google_sheet(formatted_message)
+    send_to_google_sheet(response.text)
     save_seen_jobs(new_jobs['id'].tolist())
     print("Pipeline execution complete. Vault updated.")
 

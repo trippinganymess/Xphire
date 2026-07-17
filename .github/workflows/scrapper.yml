@@ -18,7 +18,7 @@ jobs:
           python-version: '3.11'
           
       - name: Install Requirements
-        run: pip install python-jobspy supabase requests google-generativeai pandas
+        run: pip install python-jobspy supabase requests google-genai pandas
         
       - name: Execute Worker
         env:
