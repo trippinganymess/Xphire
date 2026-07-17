@@ -14,13 +14,13 @@ client = genai.Client()
 
 def get_seen_jobs():
 
-    response = supabase.table('seen_job').select('job_id').execute()
+    response = supabase.table('Seen_job').select('job_id').execute()
     return {row['job_id'] for row in response.data}
 
 def save_seen_jobs(job_ids):
     data = [{"job_id": jid} for jid in job_ids]
     if data:
-        supabase.table('seen_job').insert(data).execute()
+        supabase.table('Seen_job').insert(data).execute()
 
 def send_to_google_sheet(message_text):
     form_url = os.environ.get("GOOGLE_FORM_URL") 
