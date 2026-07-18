@@ -14,13 +14,15 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 # Indeed silently returns nothing useful and Glassdoor errors out more often.
 COUNTRY_INDEED = "India"
 
-# Per-site delay ranges (seconds). Sites with aggressive bot detection
-# (naukri/bayt/glassdoor) get longer, wider gaps; the more tolerant sites
-# (linkedin/indeed/google) get shorter ones. This also naturally spaces out
-# how often any single site sees a request across the whole run.
+# Per-site delay ranges (seconds). Glassdoor gets a longer, wider gap since
+# its scraper does a two-step token+GraphQL request under the hood; the more
+# tolerant sites (linkedin/indeed/google) get shorter ones. This also
+# naturally spaces out how often any single site sees a request per run.
+#
+# naukri and bayt have been dropped entirely (see `scrapers` list below) -
+# their errors were unconditional regardless of delay, so there was no point
+# paying the pacing time cost on them.
 SITE_DELAY_RANGES = {
-    "naukri": (12, 28),
-    "bayt": (12, 28),
     "glassdoor": (10, 24),
     "linkedin": (5, 12),
     "indeed": (5, 12),
@@ -110,6 +112,11 @@ async def send_batch_to_google_sheet_async(jobs_to_log: pd.DataFrame):
 
 async def main():
     print("Initializing Human-Paced Scraper Pipeline...")
+    try:
+        import jobspy
+        print(f"python-jobspy version: {jobspy.__version__}")
+    except Exception:
+        pass  # version not exposed on this build, not worth failing over
 
     search_titles = [
         "Software Engineer",
@@ -119,7 +126,10 @@ async def main():
         "MLOps Engineer"
     ]
 
-    scrapers = ["naukri", "google", "linkedin", "indeed", "glassdoor", "bayt"]
+    # naukri and bayt removed: both were failing 100% of the time regardless
+    # of delay (406 recaptcha / 403 forbidden), so they were pure time cost
+    # with zero payoff. Re-add them once you have proxies to pair with them.
+    scrapers = ["google", "linkedin", "indeed", "glassdoor"]
 
     # Supports a single proxy ("http://user:pass@host:port") or a
     # comma-separated list for JobSpy to round-robin through
