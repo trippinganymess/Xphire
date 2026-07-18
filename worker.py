@@ -4,7 +4,6 @@ import pandas as pd
 from supabase import create_client, Client
 from jobspy import scrape_jobs
 
-# Initialize Supabase client globally
 SUPABASE_URL: str = os.environ.get("SUPABASE_URL")
 SUPABASE_KEY: str = os.environ.get("SUPABASE_KEY")
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
@@ -104,28 +103,22 @@ def main():
         print("No active listings discovered across target criteria.")
         return
         
-    # Combine results and drop early duplicates across search variations
     combined_df = pd.concat(all_scraped_jobs, ignore_index=True)
     combined_df = combined_df.drop_duplicates(subset=['id'])
 
-    # 2. Optimized: Filtering mass recruiters natively in Pandas
     print(f"Total jobs before filtering mass recruiters: {len(combined_df)}")
     mass_recruiters = [
-        "tcs", "tata consultancy services", "infosys", "wipro", 
+        "tcs", "tata consultancy services", "wipro", 
         "cognizant", "accenture", "capgemini", "tech mahindra", 
         "hcl", "l&t", "larsen & toubro", "ibm"
     ]
     pattern = '|'.join(mass_recruiters)
-    
-    # Using case=False and na=False directly is faster and avoids string allocation crashes
     combined_df = combined_df[~combined_df['company'].str.contains(pattern, case=False, na=False, regex=True)]
     print(f"Jobs remaining after blocklist applied: {len(combined_df)}")
     
     if combined_df.empty:
         print("All scraped jobs were caught by the recruiter filter.")
         return
-
-    # 3. Targeted deduplication check
     scraped_ids = combined_df['id'].tolist()
     seen_jobs = get_seen_jobs(scraped_ids)
     new_jobs = combined_df[~combined_df['id'].isin(seen_jobs)]
@@ -135,14 +128,10 @@ def main():
         return
 
     print(f"Discovered {len(new_jobs)} total new roles.")
-    
-    # 4. Enforce submission quota limits
+
     top_70 = new_jobs.head(70)
-    
-    # Execute batch network push
     send_batch_to_google_sheet(top_70)
         
-    # Commit the IDs to prevent future duplication
     save_seen_jobs(top_70['id'].tolist())
     print("Pipeline execution complete. Vault successfully updated.")
 
