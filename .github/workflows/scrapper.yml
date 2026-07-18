@@ -11,9 +11,19 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
-        
+
       # We removed the install requirements step completely!
-          
+      # (Worth revisiting occasionally, though - JobSpy gets patched fairly
+      # often to work around new anti-bot changes on these sites. A stale
+      # venv means you never pick those fixes up. Doesn't need to run every
+      # 4 hours, but maybe on a weekly cron or manually every so often.)
+
+      - name: Randomized start delay
+        # Fires the job at a slightly different offset from the exact cron
+        # tick every time, instead of hitting every target site at :00 past
+        # every 4 hours like clockwork.
+        run: sleep $((RANDOM % 600))
+
       - name: Execute Worker
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
@@ -23,5 +33,9 @@ jobs:
           GOOGLE_ENTRY_COMPANY: ${{ secrets.GOOGLE_ENTRY_COMPANY }}
           GOOGLE_ENTRY_TITLE: ${{ secrets.GOOGLE_ENTRY_TITLE }}
           GOOGLE_ENTRY_LINK: ${{ secrets.GOOGLE_ENTRY_LINK }}
-       
+          # Optional: set PROXY_URL as a single proxy, or a comma-separated
+          # list ("http://a:b@host1:port,http://a:b@host2:port") for JobSpy
+          # to round-robin through. Leave unset to scrape direct.
+          PROXY_URL: ${{ secrets.PROXY_URL }}
+
         run: /Users/animesh/FreshLab/venv/bin/python worker.py
