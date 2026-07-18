@@ -39,7 +39,6 @@ def send_to_google_sheet(company, title, job_url):
     }
     
     try:
-  
         response = requests.post(form_url, data=payload)
         if response.status_code != 200:
             print(f"Failed to log entry for {company}. Status: {response.status_code}")
@@ -47,17 +46,21 @@ def send_to_google_sheet(company, title, job_url):
         print(f"Network error linking to Sheet: {e}")
 
 def main():
-    print("Initializing Advanced Scraper Pipeline...")
-
+    print("Initializing Advanced Scraper Pipeline with Proxy...")
+    
     search_titles = [
         "Software Engineer", 
         "Backend Engineer", 
         "Machine Learning Engineer", 
-        "Data Scientist"
+        "Data Scientist",
+        "MLOps Engineer"
     ]
-
-    scrapers = ["linkedin", "indeed", "glassdoor", "zip_recruiter", "google", "naukri", "bayt"]
     
+    scrapers = ["linkedin", "indeed", "glassdoor", "zip_recruiter", "google", "naukri", "bayt"]
+
+    proxy_url = os.environ.get("PROXY_URL")
+    proxy_list = [proxy_url] if proxy_url else None
+
     all_scraped_jobs = []
     
     for title in search_titles:
@@ -67,8 +70,9 @@ def main():
                 site_name=scrapers,
                 search_term=title,
                 location="India",
-                results_wanted=50,  
-                hours_old=6       
+                results_wanted=20,
+                hours_old=6,
+                proxies=proxy_list 
             )
             if not jobs_df.empty:
                 all_scraped_jobs.append(jobs_df)
@@ -79,10 +83,23 @@ def main():
     if not all_scraped_jobs:
         print("No roles pulled across any domain target.")
         return
-    
+        
     combined_df = pd.concat(all_scraped_jobs, ignore_index=True)
-
     combined_df = combined_df.drop_duplicates(subset=['id'])
+
+    # --- MASS RECRUITER FILTER ---
+    print(f"Total jobs before filtering mass recruiters: {len(combined_df)}")
+    mass_recruiters = [
+        "tcs", "tata consultancy services", "infosys", "wipro", 
+        "cognizant", "accenture", "capgemini", "tech mahindra", 
+        "hcl", "l&t", "larsen & toubro", "ibm"
+    ]
+    pattern = '|'.join(mass_recruiters)
+    
+    # Filter OUT any row where the company name contains a blocklist word
+    combined_df = combined_df[~combined_df['company'].str.lower().str.contains(pattern, na=False, regex=True)]
+    print(f"Jobs remaining after blocklist applied: {len(combined_df)}")
+    # -----------------------------
 
     seen_jobs = get_seen_jobs()
     new_jobs = combined_df[~combined_df['id'].isin(seen_jobs)]
@@ -92,18 +109,18 @@ def main():
         return
 
     print(f"Discovered {len(new_jobs)} total new roles.")
-
+    
     top_70 = new_jobs.head(70)
     print(f"Pushing top {len(top_70)} curated entries into active processing columns...")
     
     for index, row in top_70.iterrows():
-
         comp = row['company'] if pd.notna(row['company']) else "Hidden Company"
         role = row['title'] if pd.notna(row['title']) else "Software Role"
         link = row['job_url'] if pd.notna(row['job_url']) else ""
         
         send_to_google_sheet(comp, role, link)
         
+    # Commit the IDs to prevent future duplication
     save_seen_jobs(top_70['id'].tolist())
     print("Pipeline execution complete. Vault successfully updated.")
 
