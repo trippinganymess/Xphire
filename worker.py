@@ -1,11 +1,11 @@
 import os
 import asyncio
 import aiohttp
+import random
 import pandas as pd
 from supabase import create_client, Client
 from jobspy import scrape_jobs
 
-# Supabase Initialization
 SUPABASE_URL: str = os.environ.get("SUPABASE_URL")
 SUPABASE_KEY: str = os.environ.get("SUPABASE_KEY")
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
@@ -30,13 +30,8 @@ def save_seen_jobs(job_ids: list):
         print(f"Error updating historical vault: {e}")
 
 async def async_scrape_target(site: str, title: str, proxy_list: list) -> pd.DataFrame:
-    """
-    Wraps the synchronous jobspy function in a thread to allow the event loop 
-    to handle other scraping tasks concurrently.
-    """
     print(f"Scraping [{site}] for profile: '{title}'...")
     try:
-        # Run the blocking function in a background thread
         jobs_df = await asyncio.to_thread(
             scrape_jobs,
             site_name=[site],
@@ -55,10 +50,6 @@ async def async_scrape_target(site: str, title: str, proxy_list: list) -> pd.Dat
     return pd.DataFrame()
 
 async def send_batch_to_google_sheet_async(jobs_to_log: pd.DataFrame):
-    """
-    Uses aiohttp to push data to Google Forms concurrently.
-    A semaphore is used to prevent rate-limiting by Google.
-    """
     form_url = os.environ.get("GOOGLE_FORM_URL") 
     entry_company = os.environ.get("GOOGLE_ENTRY_COMPANY")
     entry_title = os.environ.get("GOOGLE_ENTRY_TITLE")
@@ -66,7 +57,6 @@ async def send_batch_to_google_sheet_async(jobs_to_log: pd.DataFrame):
     
     print(f"\nPushing {len(jobs_to_log)} curated entries to Google Sheets concurrently...")
     
-    # Limit to 5 concurrent connections so Google Forms doesn't throw a 429 Too Many Requests
     semaphore = asyncio.Semaphore(5)
 
     async def post_to_form(session, row):
@@ -105,21 +95,22 @@ async def main():
     
     scrapers = ["naukri", "google", "linkedin", "indeed", "glassdoor", "bayt"]
 
-    # Crucial for 403s: Ensure your PROXY_URL is formatted as http://user:pass@host:port
     proxy_url = os.environ.get("PROXY_URL")
     proxy_list = [proxy_url] if proxy_url else None
     
-    # 1. Fire off all scraping tasks concurrently
-    scraping_tasks = []
-    for site in scrapers:
-        for title in search_titles:
-            scraping_tasks.append(async_scrape_target(site, title, proxy_list))
+    all_scraped_jobs = []
     
-    # Wait for all scrapers to finish
-    results = await asyncio.gather(*scraping_tasks)
-    
-    # Filter out empty dataframes and combine
-    all_scraped_jobs = [df for df in results if not df.empty]
+    for i, title in enumerate(search_titles):
+        scraping_tasks = [async_scrape_target(site, title, proxy_list) for site in scrapers]
+        results = await asyncio.gather(*scraping_tasks)
+        
+        valid_dfs = [df for df in results if not df.empty]
+        all_scraped_jobs.extend(valid_dfs)
+        
+        if i < len(search_titles) - 1:
+            sleep_time = random.uniform(4.0, 8.0)
+            print(f"Sleeping for {sleep_time:.2f} seconds...")
+            await asyncio.sleep(sleep_time)
             
     if not all_scraped_jobs:
         print("No active listings discovered across target criteria.")
@@ -143,7 +134,6 @@ async def main():
         print("All scraped jobs were caught by the recruiter filter.")
         return
 
-    # 2. Database Deduplication
     scraped_ids = combined_df['id'].tolist()
     seen_jobs = get_seen_jobs(scraped_ids)
     new_jobs = combined_df[~combined_df['id'].isin(seen_jobs)]
@@ -155,10 +145,8 @@ async def main():
     print(f"Discovered {len(new_jobs)} total new roles.")
     top_70 = new_jobs.head(70)
     
-    # 3. Asynchronously push to Google Sheets
     await send_batch_to_google_sheet_async(top_70)
 
-    # 4. Save new jobs to Supabase
     save_seen_jobs(top_70['id'].tolist())
     print("\nPipeline execution complete. Vault successfully updated.")
 
