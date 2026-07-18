@@ -10,6 +10,23 @@ SUPABASE_URL: str = os.environ.get("SUPABASE_URL")
 SUPABASE_KEY: str = os.environ.get("SUPABASE_KEY")
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
+# JobSpy requires country_indeed for both Indeed AND Glassdoor - without it,
+# Indeed silently returns nothing useful and Glassdoor errors out more often.
+COUNTRY_INDEED = "India"
+
+# Per-site delay ranges (seconds). Sites with aggressive bot detection
+# (naukri/bayt/glassdoor) get longer, wider gaps; the more tolerant sites
+# (linkedin/indeed/google) get shorter ones. This also naturally spaces out
+# how often any single site sees a request across the whole run.
+SITE_DELAY_RANGES = {
+    "naukri": (12, 28),
+    "bayt": (12, 28),
+    "glassdoor": (10, 24),
+    "linkedin": (5, 12),
+    "indeed": (5, 12),
+    "google": (5, 12),
+}
+
 def get_seen_jobs(scraped_ids: list) -> set:
     if not scraped_ids:
         return set()
@@ -36,40 +53,49 @@ async def async_scrape_target(site: str, title: str, proxy_list: list) -> pd.Dat
             scrape_jobs,
             site_name=[site],
             search_term=title,
+            # Google Jobs ignores `search_term` entirely and only listens to
+            # this param - harmless to pass it for every site, non-Google
+            # scrapers just ignore it.
+            google_search_term=f"{title} jobs in India since yesterday",
             location="India",
+            country_indeed=COUNTRY_INDEED,
             results_wanted=10,
             hours_old=6,
             proxies=proxy_list
         )
-        if not jobs_df.empty:
+        if jobs_df is not None and not jobs_df.empty:
             print(f"-> Success: Found {len(jobs_df)} roles on {site} for '{title}'")
             return jobs_df
+        else:
+            # Previously this case was silent - zero-result runs looked
+            # identical to "everything is fine". Now it's visible.
+            print(f"-> No roles returned by {site} for '{title}' (zero matches or soft-blocked)")
     except Exception as e:
-        print(f"-> Skipped {site} for '{title}' (Likely blocked or no results)")
-    
+        print(f"-> Skipped {site} for '{title}' (Likely blocked or errored): {e}")
+
     return pd.DataFrame()
 
 async def send_batch_to_google_sheet_async(jobs_to_log: pd.DataFrame):
-    form_url = os.environ.get("GOOGLE_FORM_URL") 
+    form_url = os.environ.get("GOOGLE_FORM_URL")
     entry_company = os.environ.get("GOOGLE_ENTRY_COMPANY")
     entry_title = os.environ.get("GOOGLE_ENTRY_TITLE")
     entry_link = os.environ.get("GOOGLE_ENTRY_LINK")
-    
+
     print(f"\nPushing {len(jobs_to_log)} curated entries to Google Sheets concurrently...")
-    
+
     semaphore = asyncio.Semaphore(5)
 
     async def post_to_form(session, row):
         comp = row['company'] if pd.notna(row['company']) else "Hidden Company"
         role = row['title'] if pd.notna(row['title']) else "Software Role"
         link = row['job_url'] if pd.notna(row['job_url']) else ""
-        
+
         payload = {
             entry_company: comp,
             entry_title: role,
             entry_link: link
         }
-        
+
         async with semaphore:
             try:
                 async with session.post(form_url, data=payload) as response:
@@ -83,35 +109,55 @@ async def send_batch_to_google_sheet_async(jobs_to_log: pd.DataFrame):
         await asyncio.gather(*tasks)
 
 async def main():
-    print("Initializing High-Performance Async Scraper Pipeline...")
-    
+    print("Initializing Human-Paced Scraper Pipeline...")
+
     search_titles = [
-        "Software Engineer", 
-        "Backend Engineer", 
-        "Machine Learning Engineer", 
+        "Software Engineer",
+        "Backend Engineer",
+        "Machine Learning Engineer",
         "Data Scientist",
         "MLOps Engineer"
     ]
-    
+
     scrapers = ["naukri", "google", "linkedin", "indeed", "glassdoor", "bayt"]
 
+    # Supports a single proxy ("http://user:pass@host:port") or a
+    # comma-separated list for JobSpy to round-robin through
+    # ("proxy1,proxy2,proxy3"). Leave PROXY_URL unset to go direct.
     proxy_url = os.environ.get("PROXY_URL")
-    proxy_list = [proxy_url] if proxy_url else None
-    
+    proxy_list = [p.strip() for p in proxy_url.split(",")] if proxy_url else None
+
     all_scraped_jobs = []
-    
-    for i, title in enumerate(search_titles):
-        scraping_tasks = [async_scrape_target(site, title, proxy_list) for site in scrapers]
-        results = await asyncio.gather(*scraping_tasks)
-        
-        valid_dfs = [df for df in results if not df.empty]
-        all_scraped_jobs.extend(valid_dfs)
-        
-        if i < len(search_titles) - 1:
-            sleep_time = random.uniform(4.0, 8.0)
-            print(f"Sleeping for {sleep_time:.2f} seconds...")
-            await asyncio.sleep(sleep_time)
-            
+
+    # Shuffle title order too, so the pipeline doesn't always hit the same
+    # site in the same sequence at the same offset every single run.
+    titles_order = search_titles.copy()
+    random.shuffle(titles_order)
+
+    for i, title in enumerate(titles_order):
+        # Shuffle site order per title - no more firing all 6 requests to
+        # 6 different domains in the exact same instant, every 4 hours.
+        site_order = scrapers.copy()
+        random.shuffle(site_order)
+
+        for j, site in enumerate(site_order):
+            df = await async_scrape_target(site, title, proxy_list)
+            if not df.empty:
+                all_scraped_jobs.append(df)
+
+            is_last_site = (j == len(site_order) - 1)
+            is_last_title = (i == len(titles_order) - 1)
+            if not (is_last_site and is_last_title):
+                low, high = SITE_DELAY_RANGES.get(site, (5, 12))
+                delay = random.uniform(low, high)
+                print(f"Waiting {delay:.1f}s before next request...")
+                await asyncio.sleep(delay)
+
+        if i < len(titles_order) - 1:
+            pause = random.uniform(15, 35)
+            print(f"Finished '{title}'. Pausing {pause:.1f}s before next profile...")
+            await asyncio.sleep(pause)
+
     if not all_scraped_jobs:
         print("No active listings discovered across target criteria.")
         return
@@ -122,14 +168,14 @@ async def main():
 
     print(f"\nTotal jobs before filtering mass recruiters: {len(combined_df)}")
     mass_recruiters = [
-        "tcs", "tata consultancy services", "infosys", "wipro", 
-        "cognizant", "accenture", "capgemini", "tech mahindra", 
+        "tcs", "tata consultancy services", "infosys", "wipro",
+        "cognizant", "accenture", "capgemini", "tech mahindra",
         "hcl", "l&t", "larsen & toubro", "ibm"
     ]
     pattern = '|'.join(mass_recruiters)
     combined_df = combined_df[~combined_df['company'].str.contains(pattern, case=False, na=False, regex=True)]
     print(f"Jobs remaining after blocklist applied: {len(combined_df)}")
-    
+
     if combined_df.empty:
         print("All scraped jobs were caught by the recruiter filter.")
         return
@@ -137,14 +183,14 @@ async def main():
     scraped_ids = combined_df['id'].tolist()
     seen_jobs = get_seen_jobs(scraped_ids)
     new_jobs = combined_df[~combined_df['id'].isin(seen_jobs)]
-    
+
     if new_jobs.empty:
         print("No net-new recent roles found since last execution window.")
         return
 
     print(f"Discovered {len(new_jobs)} total new roles.")
     top_70 = new_jobs.head(70)
-    
+
     await send_batch_to_google_sheet_async(top_70)
 
     save_seen_jobs(top_70['id'].tolist())
