@@ -12,11 +12,8 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
         
-      # We removed the setup-python step entirely because your machine already has it!
+      # We removed the install requirements step completely!
           
-      - name: Install Requirements
-        run: pip install python-jobspy supabase requests google-genai pandas
-        
       - name: Execute Worker
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
@@ -26,4 +23,5 @@ jobs:
           GOOGLE_ENTRY_COMPANY: ${{ secrets.GOOGLE_ENTRY_COMPANY }}
           GOOGLE_ENTRY_TITLE: ${{ secrets.GOOGLE_ENTRY_TITLE }}
           GOOGLE_ENTRY_LINK: ${{ secrets.GOOGLE_ENTRY_LINK }}
-        run: python worker.py
+       
+        run: /Users/animesh/FreshLab/venv/bin/python worker.py
