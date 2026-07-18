@@ -14,16 +14,46 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 # Indeed silently returns nothing useful and Glassdoor errors out more often.
 COUNTRY_INDEED = "India"
 
-# Per-site delay ranges (seconds). Glassdoor gets a longer, wider gap since
-# its scraper does a two-step token+GraphQL request under the hood; the more
-# tolerant sites (linkedin/indeed/google) get shorter ones. This also
-# naturally spaces out how often any single site sees a request per run.
+# Google Jobs ignores search_term/location/hours_old entirely once you pass
+# google_search_term - it only understands natural-language text that looks
+# like what Google's own Jobs search box would generate, not an arbitrary
+# sentence we invent. The default builder below is a best-guess based on
+# JobSpy's own documented working example
+# ("software engineer jobs near San Francisco, CA since yesterday") - it
+# swaps "near X" in for the "in X" phrasing that returned zero results
+# before, since "near" matches the documented pattern more closely. This is
+# still a guess, not a verified fix.
 #
-# naukri and bayt have been dropped entirely (see `scrapers` list below) -
-# their errors were unconditional regardless of delay, so there was no point
-# paying the pacing time cost on them.
+# To actually fix a title: search "{title} jobs" on google.com, open the
+# Jobs panel, apply your filters, and copy the text that appears in the
+# panel's OWN search box (not the main Google search bar) into the dict
+# below. Once a title has an entry here, it's used as-is and the guess is
+# skipped for that title.
+GOOGLE_QUERY_OVERRIDES = {
+    # "Software Engineer": "paste the verified string from Google Jobs here",
+}
+
+def build_google_search_term(title: str) -> str:
+    if title in GOOGLE_QUERY_OVERRIDES:
+        return GOOGLE_QUERY_OVERRIDES[title]
+    # "since yesterday" is the exact freshness phrase confirmed to work in
+    # JobSpy's own example. Country-level "India" (vs. a city) is still an
+    # open question - if this keeps returning zero for a given title, that's
+    # the next thing to test manually and move into the override dict above.
+    return f"{title} jobs near India since yesterday"
+
+# Per-site delay ranges (seconds). The more tolerant sites (linkedin/indeed/
+# google) get shorter gaps; this also naturally spaces out how often any
+# single site sees a request per run.
+#
+# naukri, bayt, and glassdoor have all been dropped entirely (see
+# `scrapers` list below) - all three were failing unconditionally
+# regardless of delay or config (glassdoor's is a confirmed upstream
+# JobSpy/API bug, independent of anything on our end), so there was no
+# point paying the pacing time cost on them. Re-add glassdoor once JobSpy
+# patches the upstream issue; re-add naukri/bayt once you have proxies to
+# pair with them.
 SITE_DELAY_RANGES = {
-    "glassdoor": (10, 24),
     "linkedin": (5, 12),
     "indeed": (5, 12),
     "google": (5, 12),
@@ -58,7 +88,7 @@ async def async_scrape_target(site: str, title: str, proxy_list: list) -> pd.Dat
             # Google Jobs ignores `search_term` entirely and only listens to
             # this param - harmless to pass it for every site, non-Google
             # scrapers just ignore it.
-            google_search_term=f"{title} jobs in India since yesterday",
+            google_search_term=build_google_search_term(title),
             location="India",
             country_indeed=COUNTRY_INDEED,
             results_wanted=10,
@@ -126,10 +156,12 @@ async def main():
         "MLOps Engineer"
     ]
 
-    # naukri and bayt removed: both were failing 100% of the time regardless
-    # of delay (406 recaptcha / 403 forbidden), so they were pure time cost
-    # with zero payoff. Re-add them once you have proxies to pair with them.
-    scrapers = ["google", "linkedin", "indeed", "glassdoor"]
+    # naukri, bayt, and glassdoor removed: all three were failing 100% of
+    # the time regardless of delay (406 recaptcha / 403 forbidden / upstream
+    # API error), so they were pure time cost with zero payoff. Re-add
+    # naukri/bayt once you have proxies to pair with them; re-add glassdoor
+    # once JobSpy patches the upstream bug.
+    scrapers = ["google", "linkedin", "indeed"]
 
     # Supports a single proxy ("http://user:pass@host:port") or a
     # comma-separated list for JobSpy to round-robin through
@@ -145,8 +177,8 @@ async def main():
     random.shuffle(titles_order)
 
     for i, title in enumerate(titles_order):
-        # Shuffle site order per title - no more firing all 6 requests to
-        # 6 different domains in the exact same instant, every 4 hours.
+        # Shuffle site order per title - no more firing all requests to
+        # every domain in the exact same instant, every 4 hours.
         site_order = scrapers.copy()
         random.shuffle(site_order)
 
