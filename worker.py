@@ -66,7 +66,7 @@ def send_batch_to_google_sheet(jobs_to_log: pd.DataFrame):
                 print(f"Network error syncing entry for {comp}: {e}")
 
 def main():
-    print("Initializing High-Performance Scraper Pipeline...")
+    print("Initializing High-Performance Diversified Scraper Pipeline...")
     
     search_titles = [
         "Software Engineer", 
@@ -75,40 +75,47 @@ def main():
         "Data Scientist",
         "MLOps Engineer"
     ]
-    scrapers = ["linkedin", "indeed", "glassdoor", "zip_recruiter", "google", "naukri", "bayt"]
+    
+    # Prioritizing platforms that perform well in India alongside LinkedIn
+    scrapers = ["naukri", "google", "linkedin", "indeed", "glassdoor", "bayt"]
 
     proxy_url = os.environ.get("PROXY_URL")
     proxy_list = [proxy_url] if proxy_url else None
     all_scraped_jobs = []
     
-    # 1. Gather raw data pools
-    for title in search_titles:
-        print(f"Scraping targets for: '{title}'...")
-        try:
-            jobs_df = scrape_jobs(
-                site_name=scrapers,
-                search_term=title,
-                location="India",
-                results_wanted=20,
-                hours_old=6,
-                proxies=proxy_list 
-            )
-            if not jobs_df.empty:
-                all_scraped_jobs.append(jobs_df)
-        except Exception as e:
-            print(f"Scraper skipped block '{title}' due to network issue: {e}")
-            continue
+    # Loop through BOTH scrapers and titles individually to ensure fair distribution
+    for site in scrapers:
+        for title in search_titles:
+            print(f"Scraping [{site}] for profile: '{title}'...")
+            try:
+                jobs_df = scrape_jobs(
+                    site_name=[site], # Force JobSpy to look at this exact site
+                    search_term=title,
+                    location="India",
+                    results_wanted=10, # Lower per-run quota to maximize variety
+                    hours_old=6,
+                    proxies=proxy_list 
+                )
+                if not jobs_df.empty:
+                    all_scraped_jobs.append(jobs_df)
+                    print(f"-> Success: Found {len(jobs_df)} roles on {site}")
+            except Exception as e:
+                # If a specific site blocks the proxy, the pipeline keeps moving
+                print(f"-> Skipped {site} for '{title}' (Likely blocked or no results)")
+                continue
             
     if not all_scraped_jobs:
         print("No active listings discovered across target criteria.")
         return
         
+
     combined_df = pd.concat(all_scraped_jobs, ignore_index=True)
     combined_df = combined_df.drop_duplicates(subset=['id'])
+    combined_df = combined_df.sample(frac=1).reset_index(drop=True)
 
     print(f"Total jobs before filtering mass recruiters: {len(combined_df)}")
     mass_recruiters = [
-        "tcs", "tata consultancy services", "wipro", 
+        "tcs", "tata consultancy services", "infosys", "wipro", 
         "cognizant", "accenture", "capgemini", "tech mahindra", 
         "hcl", "l&t", "larsen & toubro", "ibm"
     ]
@@ -119,6 +126,8 @@ def main():
     if combined_df.empty:
         print("All scraped jobs were caught by the recruiter filter.")
         return
+
+
     scraped_ids = combined_df['id'].tolist()
     seen_jobs = get_seen_jobs(scraped_ids)
     new_jobs = combined_df[~combined_df['id'].isin(seen_jobs)]
@@ -128,12 +137,12 @@ def main():
         return
 
     print(f"Discovered {len(new_jobs)} total new roles.")
+    
 
     top_70 = new_jobs.head(70)
+    
+
     send_batch_to_google_sheet(top_70)
-        
+
     save_seen_jobs(top_70['id'].tolist())
     print("Pipeline execution complete. Vault successfully updated.")
-
-if __name__ == "__main__":
-    main()
