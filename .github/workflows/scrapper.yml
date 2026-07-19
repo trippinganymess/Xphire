@@ -18,12 +18,6 @@ jobs:
       # venv means you never pick those fixes up. Doesn't need to run every
       # 4 hours, but maybe on a weekly cron or manually every so often.)
 
-      - name: Randomized start delay
-        # Fires the job at a slightly different offset from the exact cron
-        # tick every time, instead of hitting every target site at :00 past
-        # every 4 hours like clockwork.
-        run: sleep $((RANDOM % 600))
-
       - name: Execute Worker
         env:
           PYTHONUNBUFFERED: "1"
