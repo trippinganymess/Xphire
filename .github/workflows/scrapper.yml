@@ -1,8 +1,6 @@
 name: Job Scout AI
 
 on:
-  schedule:
-    - cron: '0 */4 * * *'
   workflow_dispatch:
 
 jobs:
@@ -11,12 +9,6 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
-
-      # We removed the install requirements step completely!
-      # (Worth revisiting occasionally, though - JobSpy gets patched fairly
-      # often to work around new anti-bot changes on these sites. A stale
-      # venv means you never pick those fixes up. Doesn't need to run every
-      # 4 hours, but maybe on a weekly cron or manually every so often.)
 
       - name: Execute Worker
         env:
