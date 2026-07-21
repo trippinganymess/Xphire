@@ -25,4 +25,4 @@ jobs:
           # to round-robin through. Leave unset to scrape direct.
           PROXY_URL: ${{ secrets.PROXY_URL }}
 
-        run: python worker_ATS.py.
+        run: /Users/animesh/FreshLab/venv/bin/python worker_intern.py
