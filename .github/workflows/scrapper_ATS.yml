@@ -28,7 +28,9 @@ jobs:
         env:
           PYTHONUNBUFFERED: "1"
           # Optional: Use a dedicated secret for your new sheet's Google Form URL
-          GOOGLE_FORM_URL_ATS: ${{ secrets.GOOGLE_FORM_URL_ATS }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GOOGLE_FORM_URL: ${{ secrets.GOOGLE_FORM_URL }}
           GOOGLE_ENTRY_COMPANY: ${{ secrets.GOOGLE_ENTRY_COMPANY }}
           GOOGLE_ENTRY_TITLE: ${{ secrets.GOOGLE_ENTRY_TITLE }}
