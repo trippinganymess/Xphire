@@ -207,6 +207,5 @@ async def main():
             await submit_to_google_sheet(client, job)
 
     print("\n[COMPLETE] ATS Direct pipeline run finished.")
-
 if __name__ == "__main__":
     asyncio.run(main())
