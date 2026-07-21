@@ -35,4 +35,4 @@ jobs:
           GOOGLE_ENTRY_COMPANY: ${{ secrets.GOOGLE_ENTRY_COMPANY }}
           GOOGLE_ENTRY_TITLE: ${{ secrets.GOOGLE_ENTRY_TITLE }}
           GOOGLE_ENTRY_LINK: ${{ secrets.GOOGLE_ENTRY_LINK }}
-        run: python worker_ATS.py
+        run: python worker_ats.py
