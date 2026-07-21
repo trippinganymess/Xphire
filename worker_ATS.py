@@ -19,52 +19,63 @@ if GOOGLE_FORM_URL and GOOGLE_FORM_URL.endswith("/viewform"):
 # THE MEGA ATS TARGET DIRECTORY
 # ==========================================
 GREENHOUSE_SLUGS = [
-    # Indian Tech, Unicorns, & MNC Outposts
+    # ---- Indian Unicorns, Decacorns & High-Growth Startups ----
     "razorpay", "phonepe", "groww", "swiggy", "zepto", "meesho", "postman",
-    "curefit", "slice", "cred", "atlassian", "adobe", "urbancompany", 
-    "nykaa", "blinkit", "policybazaar", "zomato", "cars24", "inmobi", 
-    "commerceiq", "coindcx", "hasura", "browserstack", "chargebee", 
-    "leadsquared", "darwinbox", "classplus", "eruditus", "pinelabs", 
-    "delhivery", "innovaccer", "lenskart", "spinny", "unacademy", 
-    "physicswallah", "shiprocket", "gupshup", "ofbusiness", "games24x7", 
-    "dream11", "clevertap", "moengage", "webengage", "sprinklr", "druva", 
-    "highradius", "icertis", "rategain", "amagi", "capillary", "quizizz",
-    "fractal", "thoughtspot", "nutanix", "zscaler",
+    "curefit", "slice", "cred", "urbancompany", "nykaa", "blinkit", 
+    "policybazaar", "zomato", "cars24", "inmobi", "commerceiq", "coindcx", 
+    "hasura", "browserstack", "chargebee", "leadsquared", "darwinbox", 
+    "classplus", "eruditus", "pinelabs", "delhivery", "innovaccer", "lenskart", 
+    "spinny", "unacademy", "physicswallah", "shiprocket", "gupshup", "ofbusiness", 
+    "games24x7", "dream11", "clevertap", "moengage", "webengage", "sprinklr", 
+    "druva", "highradius", "icertis", "rategain", "amagi", "capillary", "quizizz",
+    "fractal", "thoughtspot", "bharatpe", "upstox", "apna", "ola", "oyo", 
+    "makemytrip", "flipkart", "paytm", "digit", "acko", "khatabook", "udaan",
+    "myntra", "pharmeasy", "billdesk", "mindtickle", "locus", "dunzo",
     
-    # Global Tech & Tier-1
-    "airbnb", "stripe", "figma", "databricks", "coinbase", "okta",
-    "cloudflare", "lyft", "discord", "reddit", "upwork", "plaid", 
-    "instacart", "rippling", "mongodb", "twilio", "github", 
-    "doordash", "robinhood", "square", "block", "taboola", "pinterest",
-    "box", "asana", "gitlab", "hashicorp", "datadog", "snowflake", 
-    "confluent", "canva", "segment", "fivetran", "grab", "gojek", 
-    "revolut", "monzo", "checkoutcom", "vimeo", "coursera", "udemy", 
-    "roblox", "epicgames", "unity", "elastic"
+    # ---- Global Tech Giants & Tier-1 MNCs (With Indian Offices) ----
+    "airbnb", "stripe", "figma", "databricks", "coinbase", "okta", "cloudflare", 
+    "lyft", "discord", "reddit", "upwork", "plaid", "instacart", "rippling", 
+    "mongodb", "twilio", "github", "doordash", "robinhood", "square", "block", 
+    "taboola", "pinterest", "box", "asana", "gitlab", "hashicorp", "datadog", 
+    "snowflake", "confluent", "canva", "segment", "fivetran", "grab", "gojek", 
+    "revolut", "monzo", "checkoutcom", "vimeo", "coursera", "udemy", "roblox", 
+    "epicgames", "unity", "elastic", "dropbox", "gusto", "hubspot", "evernote", 
+    "airtable", "atlassian", "adobe", "nutanix", "zscaler", "cisco", "vmware",
+    "splunk", "crowdstrike", "paloaltonetworks", "fortinet", "sophos", "mulesoft"
 ]
 
 LEVER_SLUGS = [
-    # Lever-Heavy Global & Remote
+    # ---- Remote-First, Global SaaS, and High-Growth ----
     "spotify", "palantir", "netflix", "mindtickle", "clear", "remote", 
     "loom", "zalando", "thoughtworks", "lever", "yelp", "eventbrite", 
     "zapier", "auth0", "contentful", "netlify", "framer", "webflow", 
-    "kpmg", "shopify", "hopper", "fullstory", "invision", "lattice", 
+    "shopify", "hopper", "fullstory", "invision", "lattice", 
     "gocardless", "trello", "sendgrid", "mailchimp", "pitch", "miro", 
-    "mural", "sketch", "zeplin", "marvel", "balsamiq"
+    "mural", "sketch", "zeplin", "marvel", "balsamiq", "klook", "klarna", 
+    "wix", "xero", "substack", "patreon", "peloton", "glossier", "tubi", 
+    "duolingo", "masterclass", "outschool", "udacity", "1password",
+    "algolia", "iterable", "g2", "kpmg"
 ]
 
 ASHBY_SLUGS = [
-    # The Modern AI / Data / Next-Gen Startup Ecosystem
+    # ---- The Modern AI, Web3, & Next-Gen Developer Tools Ecosystem ----
     "notion", "ramp", "replit", "scale", "linear", "vercel", "perplexity", 
     "temporal", "modal", "openai", "cartesia", "parspec", "anthropic", 
     "cohere", "huggingface", "midjourney", "stability", "runway", "descript", 
     "jasper", "synthesia", "elevenlabs", "heygen", "tome", "gamma", "apollo", 
     "gong", "deel", "oyster", "gusto", "brex", "carta", "dbtlabs", "airbyte", 
-    "prefect", "dagster", "posthog", "amplitude", "mixpanel"
+    "prefect", "dagster", "posthog", "amplitude", "mixpanel", "farcaster", 
+    "alchemy", "opensea", "polygon", "uniswap", "a16z", "sequoia", 
+    "ycombinator", "beehiiv", "gumroad", "lottiefiles", "raycast", "superhuman",
+    "warp", "flyio", "planetscale", "supabase", "clerk", "pinecone", "milvus"
 ]
 
 SMARTRECRUITERS_SLUGS = [
+    # ---- Enterprise, Gaming, & Global Corporations ----
     "square", "visa", "bosch", "ubisoft", "twitter", "linkedin", "ikea", 
-    "equinox", "colliers", "biogen", "blueorigin", "smartrecruiters", "sgs"
+    "equinox", "colliers", "biogen", "blueorigin", "smartrecruiters", "sgs",
+    "averydennison", "mcdonalds", "loreal", "marcjacobs", "deloitte", "pwc", 
+    "kaiserpermanente", "autodesk", "nielsen", "jll", "cbre", "mattel"
 ]
 
 # ==========================================
