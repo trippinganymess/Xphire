@@ -45,7 +45,7 @@ class Deduper:
         for i in range(0, len(scraped_ids), 100):
             chunk = scraped_ids[i:i + 100]
             ids_str = ",".join(chunk)
-            url = f"{self.supabase_url.rstrip('/')}/rest/v1/seen_jobs?select=job_id&job_id=in.({ids_str})"
+            url = f"{self.supabase_url.rstrip('/')}/rest/v1/Seen_job?select=job_id&job_id=in.({ids_str})"
             
             try:
                 resp = await client.get(url, headers=self.headers, timeout=10.0)
@@ -72,7 +72,7 @@ class Deduper:
             return
 
         headers = {**self.headers, "Prefer": "resolution=ignore-duplicates"}
-        url = f"{self.supabase_url.rstrip('/')}/rest/v1/seen_jobs"
+        url = f"{self.supabase_url.rstrip('/')}/rest/v1/Seen_job"
         
         payload = [{"job_id": job["job_id"]} for job in jobs]
 
