@@ -7,12 +7,22 @@ class Deduper:
     def __init__(self):
         self.supabase_url = os.environ.get("SUPABASE_URL")
         self.supabase_key = os.environ.get("SUPABASE_KEY")
-        
-        self.headers = {
+        # Service role key bypasses Row Level Security — required for INSERT.
+        # Falls back to anon key if not set (reads still work, writes may 404).
+        self.service_key = os.environ.get("SUPABASE_SERVICE_KEY") or self.supabase_key
+
+        self.read_headers = {
             "apikey": self.supabase_key,
             "Authorization": f"Bearer {self.supabase_key}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         } if self.supabase_key else {}
+
+        self.write_headers = {
+            "apikey": self.service_key,
+            "Authorization": f"Bearer {self.service_key}",
+            "Content-Type": "application/json",
+        } if self.service_key else {}
+
 
     @staticmethod
     def generate_job_id(company: str, title: str, url: str) -> str:
@@ -45,10 +55,10 @@ class Deduper:
         for i in range(0, len(scraped_ids), 100):
             chunk = scraped_ids[i:i + 100]
             ids_str = ",".join(chunk)
-            url = f"{self.supabase_url.rstrip('/')}/rest/v1/Seen_job?select=job_id&job_id=in.({ids_str})"
+            url = f"{self.supabase_url.rstrip('/')}/rest/v1/seen_jobs?select=job_id&job_id=in.({ids_str})"
             
             try:
-                resp = await client.get(url, headers=self.headers, timeout=10.0)
+                resp = await client.get(url, headers=self.read_headers, timeout=10.0)
                 if resp.status_code == 200:
                     for row in resp.json():
                         existing_ids.add(row["job_id"])
@@ -71,16 +81,18 @@ class Deduper:
         if not self.supabase_url or not self.supabase_key or not jobs:
             return
 
-        headers = {**self.headers, "Prefer": "resolution=ignore-duplicates"}
-        url = f"{self.supabase_url.rstrip('/')}/rest/v1/Seen_job"
-        
+        headers = {**self.write_headers, "Prefer": "resolution=ignore-duplicates"}
+        url = f"{self.supabase_url.rstrip('/')}/rest/v1/seen_jobs"
+
         payload = [{"job_id": job["job_id"]} for job in jobs]
 
         for i in range(0, len(payload), 100):
             chunk = payload[i:i + 100]
             try:
                 resp = await client.post(url, headers=headers, json=chunk, timeout=10.0)
-                if resp.status_code not in (200, 201):
-                    print(f"  [ERROR] Failed to save to Supabase ({resp.status_code})")
+                if resp.status_code in (200, 201):
+                    print(f"  [SUPABASE] Saved {len(chunk)} job IDs.")
+                else:
+                    print(f"  [ERROR] Failed to save to Supabase ({resp.status_code}): {resp.text}")
             except Exception as e:
                 print(f"  [ERROR] Supabase insert failed: {e}")
