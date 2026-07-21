@@ -2,14 +2,15 @@ import os
 import asyncio
 import random
 import pandas as pd
+# pyrefly: ignore [missing-import]
 from jobspy import scrape_jobs
 
+from utils.ai_reviewer import enrich_jobs
 from utils.deduper import Deduper
 from utils.scraping import (
     build_google_search_term,
     create_stealth_client,
     df_to_job_dicts,
-    filter_df_by_unseen,
     filter_mass_recruiters,
     human_delay,
     parse_proxy_list,
@@ -100,7 +101,6 @@ async def main():
     scrapers = ["google", "linkedin", "indeed"]
 
     proxy_list = parse_proxy_list()
-
     all_scraped_jobs = []
 
     titles_order = search_titles.copy()
@@ -132,8 +132,7 @@ async def main():
 
     # Safety-net filter: job_type="internship" above isn't guaranteed to be
     # honored by every site/scraper, so anything that slipped through
-    # without "intern" in the title gets dropped here. Broaden the regex
-    # (e.g. "intern|co-op|trainee") if you want to catch adjacent titles.
+    # without "intern" in the title gets dropped here.
     print(f"Jobs before internship title filter: {len(combined_df)}")
     combined_df = combined_df[combined_df["title"].str.contains("intern", case=False, na=False)]
     print(f"Jobs remaining after internship title filter: {len(combined_df)}")
@@ -151,23 +150,28 @@ async def main():
         print("All scraped internships were caught by the recruiter filter.")
         return
 
-    # --- Deduplication via shared Deduper (httpx) ---
+    # ── Convert to common dict schema ─────────────────────────────────────────
+    all_job_dicts = df_to_job_dicts(combined_df)
+
     async with create_stealth_client() as client:
-        job_dicts = df_to_job_dicts(combined_df)
-        unseen_jobs = await deduper.get_unseen_jobs(client, job_dicts)
+        # ── Deduplication ──────────────────────────────────────────────────────
+        unseen_jobs = await deduper.get_unseen_jobs(client, all_job_dicts)
 
         if not unseen_jobs:
             print("No net-new internship postings found since last execution window.")
             return
 
-        unseen_ids = {j["job_id"] for j in unseen_jobs}
-        new_jobs_df = filter_df_by_unseen(combined_df, unseen_ids)
+        # ── AI Enrichment ──────────────────────────────────────────────────────
+        unseen_jobs = await enrich_jobs(unseen_jobs)
 
-        print(f"Discovered {len(new_jobs_df)} total new internships.")
-        top_batch = new_jobs_df.head(MAX_JOBS_PER_RUN)
+        top_batch = unseen_jobs[:MAX_JOBS_PER_RUN]
+        print(f"\nDispatching {len(top_batch)} enriched internship roles to Google Sheets...")
 
+        # ── Google Sheets dispatch ─────────────────────────────────────────────
         await send_batch_to_google_sheet(client, top_batch, default_role="Internship Role")
-        await deduper.save_seen_jobs(client, unseen_jobs[:MAX_JOBS_PER_RUN])
+
+        # ── Persistence ────────────────────────────────────────────────────────
+        await deduper.save_seen_jobs(client, top_batch)
 
     print("\nInternship pipeline execution complete. Vault successfully updated.")
 

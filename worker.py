@@ -4,12 +4,12 @@ import random
 import pandas as pd
 from jobspy import scrape_jobs
 
+from utils.ai_reviewer import enrich_jobs
 from utils.deduper import Deduper
 from utils.scraping import (
     build_google_search_term,
     create_stealth_client,
     df_to_job_dicts,
-    filter_df_by_unseen,
     filter_mass_recruiters,
     human_delay,
     parse_proxy_list,
@@ -75,16 +75,15 @@ async def main():
     scrapers = ["google", "linkedin", "indeed"]
 
     proxy_list = parse_proxy_list()
-
     all_scraped_jobs = []
 
-    # Shuffle title order too, so the pipeline doesn't always hit the same
-    # site in the same sequence at the same offset every single run.
+    # Shuffle title order so the pipeline doesn't always hit the same site
+    # in the same sequence at the same offset every single run.
     titles_order = search_titles.copy()
     random.shuffle(titles_order)
 
     for i, title in enumerate(titles_order):
-        # Shuffle site order per title - no more firing all requests to
+        # Shuffle site order per title — no more firing all requests to
         # every domain in the exact same instant, every 4 hours.
         site_order = scrapers.copy()
         random.shuffle(site_order)
@@ -117,23 +116,28 @@ async def main():
         print("All scraped jobs were caught by the recruiter filter.")
         return
 
-    # --- Deduplication via shared Deduper (httpx) ---
+    # ── Convert to common dict schema ─────────────────────────────────────────
+    all_job_dicts = df_to_job_dicts(combined_df)
+
     async with create_stealth_client() as client:
-        job_dicts = df_to_job_dicts(combined_df)
-        unseen_jobs = await deduper.get_unseen_jobs(client, job_dicts)
+        # ── Deduplication ──────────────────────────────────────────────────────
+        unseen_jobs = await deduper.get_unseen_jobs(client, all_job_dicts)
 
         if not unseen_jobs:
             print("No net-new recent roles found since last execution window.")
             return
 
-        unseen_ids = {j["job_id"] for j in unseen_jobs}
-        new_jobs_df = filter_df_by_unseen(combined_df, unseen_ids)
+        # ── AI Enrichment ──────────────────────────────────────────────────────
+        unseen_jobs = await enrich_jobs(unseen_jobs)
 
-        print(f"Discovered {len(new_jobs_df)} total new roles.")
-        top_70 = new_jobs_df.head(70)
+        top_70 = unseen_jobs[:70]
+        print(f"\nDispatching {len(top_70)} enriched roles to Google Sheets...")
 
+        # ── Google Sheets dispatch ─────────────────────────────────────────────
         await send_batch_to_google_sheet(client, top_70)
-        await deduper.save_seen_jobs(client, unseen_jobs[:70])
+
+        # ── Persistence ────────────────────────────────────────────────────────
+        await deduper.save_seen_jobs(client, top_70)
 
     print("\nPipeline execution complete. Vault successfully updated.")
 

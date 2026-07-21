@@ -1,5 +1,6 @@
 import os
 import hashlib
+# pyrefly: ignore [missing-import]
 import httpx
 from typing import List, Dict, Any
 
@@ -77,22 +78,56 @@ class Deduper:
         return new_jobs
 
     async def save_seen_jobs(self, client: httpx.AsyncClient, jobs: List[Dict[str, Any]]):
-        """Inserts newly processed job_ids into Supabase."""
+        """
+        Upsert fully enriched job records into Supabase.
+
+        Persists: job_id, company, title, url, location, experience,
+                  salary, source, rating.
+
+        Uses 'resolution=merge-duplicates' so subsequent pipeline runs
+        update stale records rather than erroring on PK conflicts.
+
+        NOTE: The Seen_job table must have the extra columns. Run this
+        migration in Supabase SQL Editor if not yet applied:
+
+            ALTER TABLE "Seen_job"
+              ADD COLUMN IF NOT EXISTS company    TEXT,
+              ADD COLUMN IF NOT EXISTS title      TEXT,
+              ADD COLUMN IF NOT EXISTS url        TEXT,
+              ADD COLUMN IF NOT EXISTS location   TEXT,
+              ADD COLUMN IF NOT EXISTS experience TEXT,
+              ADD COLUMN IF NOT EXISTS salary     TEXT,
+              ADD COLUMN IF NOT EXISTS source     TEXT,
+              ADD COLUMN IF NOT EXISTS rating     INTEGER;
+        """
         if not self.supabase_url or not self.supabase_key or not jobs:
             return
 
-        headers = {**self.write_headers, "Prefer": "resolution=ignore-duplicates"}
+        headers = {**self.write_headers, "Prefer": "resolution=merge-duplicates"}
         url = f"{self.supabase_url.rstrip('/')}/rest/v1/Seen_job"
 
-        payload = [{"job_id": job["job_id"]} for job in jobs]
+        payload = [
+            {
+                "job_id":     job.get("job_id", ""),
+                "company":    job.get("company", ""),
+                "title":      job.get("title", ""),
+                "url":        job.get("url", ""),
+                "location":   job.get("location", ""),
+                "experience": job.get("experience", ""),
+                "salary":     job.get("salary", ""),
+                "source":     job.get("source", ""),
+                "rating":     job.get("rating", 3),
+            }
+            for job in jobs
+        ]
 
         for i in range(0, len(payload), 100):
-            chunk = payload[i:i + 100]
+            chunk = payload[i : i + 100]
             try:
                 resp = await client.post(url, headers=headers, json=chunk, timeout=10.0)
                 if resp.status_code in (200, 201):
-                    print(f"  [SUPABASE] Saved {len(chunk)} job IDs.")
+                    print(f"  [SUPABASE] Saved {len(chunk)} enriched records.")
                 else:
                     print(f"  [ERROR] Failed to save to Supabase ({resp.status_code}): {resp.text}")
-            except Exception as e:
-                print(f"  [ERROR] Supabase insert failed: {e}")
+            except Exception as exc:
+                print(f"  [ERROR] Supabase insert failed: {exc}")

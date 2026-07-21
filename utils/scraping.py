@@ -8,6 +8,7 @@ blocklist, proxy parsing, humanised pacing, and Google search term building.
 import os
 import random
 import asyncio
+# pyrefly: ignore [missing-import]
 import httpx
 import pandas as pd
 from typing import List, Optional
@@ -160,73 +161,113 @@ async def human_delay(site: str, is_between_titles: bool = False):
 
 
 # ============================================================================
-# GOOGLE SHEETS POSTER
+# GOOGLE FORMS DISPATCHER
 # ============================================================================
 async def send_batch_to_google_sheet(
     client: httpx.AsyncClient,
-    jobs_to_log: pd.DataFrame,
+    jobs: list,
     default_role: str = "Software Role",
 ):
     """
-    Push a DataFrame of jobs to Google Sheets via a Google Form.
+    Dispatch a list of enriched job dicts to Google Sheets via a Google Form.
 
-    Uses httpx instead of aiohttp for consistency with the rest of the
-    pipeline.  Concurrency is capped at 5 to stay polite.
+    Reads all 7 entry keys from environment variables and maps the full
+    enriched payload. Concurrency is capped at 5.
+
+    Args:
+        client: Shared httpx.AsyncClient.
+        jobs: List of enriched job dicts — must contain keys produced by
+              df_to_job_dicts() + enrich_jobs():
+              job_id, company, title, url, location, experience, salary,
+              source, rating.
+        default_role: Fallback title string when job['title'] is absent.
     """
     form_url = os.environ.get("GOOGLE_FORM_URL")
     entry_company = os.environ.get("GOOGLE_ENTRY_COMPANY")
     entry_title = os.environ.get("GOOGLE_ENTRY_TITLE")
     entry_link = os.environ.get("GOOGLE_ENTRY_LINK")
+    entry_location = os.environ.get("GOOGLE_ENTRY_LOCATION")
+    entry_experience = os.environ.get("GOOGLE_ENTRY_EXPERIENCE")
+    entry_salary = os.environ.get("GOOGLE_ENTRY_SALARY")
+    entry_source = os.environ.get("GOOGLE_ENTRY_SOURCE")
 
     if not all([form_url, entry_company, entry_title, entry_link]):
-        print("[WARN] Google Form env vars incomplete — skipping sheet sync.")
+        print("[WARN] Core Google Form env vars missing — skipping sheet sync.")
         return
 
-    print(f"\nPushing {len(jobs_to_log)} curated entries to Google Sheets...")
-
+    print(f"\nPushing {len(jobs)} enriched entries to Google Sheets...")
     semaphore = asyncio.Semaphore(5)
 
-    async def _post_row(row):
-        comp = row["company"] if pd.notna(row.get("company")) else "Hidden Company"
-        role = row["title"] if pd.notna(row.get("title")) else default_role
-        link = row.get("job_url", row.get("url", ""))
-        if pd.isna(link):
-            link = ""
+    async def _post_job(job: dict):
+        comp = str(job.get("company") or "Hidden Company").upper()
+        role = str(job.get("title") or default_role)
+        link = str(job.get("url") or "")
+        location = str(job.get("location") or "India")
+        experience = str(job.get("experience") or "Not Specified")
+        salary = str(job.get("salary") or "Not Disclosed")
+        rating = int(job.get("rating") or 3)
+        source_raw = str(job.get("source") or "Unknown")
+        source_str = f"{source_raw} (Rating: {'⭐' * rating})"
 
-        payload = {
-            entry_company: comp,
-            entry_title: role,
-            entry_link: link,
-        }
+        payload: dict = {}
+        if entry_company:    payload[entry_company]    = comp
+        if entry_title:      payload[entry_title]      = role
+        if entry_link:       payload[entry_link]       = link
+        if entry_location:   payload[entry_location]   = location
+        if entry_experience: payload[entry_experience] = experience
+        if entry_salary:     payload[entry_salary]     = salary
+        if entry_source:     payload[entry_source]     = source_str
 
         async with semaphore:
             try:
                 resp = await client.post(form_url, data=payload, timeout=10.0)
                 if resp.status_code not in (200, 201):
-                    print(f"Failed to log entry for {comp}. Status: {resp.status_code}")
-            except Exception as e:
-                print(f"Network error syncing entry for {comp}: {e}")
+                    print(f"  [SHEET] Failed for {comp}. Status: {resp.status_code}")
+                else:
+                    print(f"  [SYNCED] {comp}: {role}")
+            except Exception as exc:
+                print(f"  [SHEET] Network error for {comp}: {exc}")
 
-    tasks = [_post_row(row) for _, row in jobs_to_log.iterrows()]
-    await asyncio.gather(*tasks)
+    await asyncio.gather(*[_post_job(job) for job in jobs])
 
 
 # ============================================================================
-# DATAFRAME ↔ DICT BRIDGE  (for Deduper integration with JobSpy workers)
+# DATAFRAME → DICT BRIDGE  (for Deduper + AI reviewer integration)
 # ============================================================================
-def df_to_job_dicts(df: pd.DataFrame) -> list[dict]:
+def df_to_job_dicts(df: pd.DataFrame, source_override: str = "") -> list[dict]:
     """
-    Convert a JobSpy DataFrame into the List[Dict] format the Deduper expects.
+    Convert a JobSpy DataFrame into the List[Dict] schema used by the
+    Deduper and AI reviewer.
 
-    Maps the 'id' column → 'job_id', and carries 'company', 'title', 'job_url'.
+    Common schema:
+        job_id, company, title, url, location, description, source
+
+    Args:
+        df: Raw JobSpy DataFrame.
+        source_override: If provided, overrides the 'site' column value.
     """
     records = []
     for _, row in df.iterrows():
+        # Salary: build a human-readable string from min/max columns if present
+        min_amt = row.get("min_amount")
+        max_amt = row.get("max_amount")
+        currency = str(row.get("currency") or "").upper()
+        if pd.notna(min_amt) and pd.notna(max_amt):
+            salary_str = f"{currency} {int(min_amt):,} – {int(max_amt):,} / yr"
+        elif pd.notna(min_amt):
+            salary_str = f"{currency} {int(min_amt):,}+"
+        else:
+            salary_str = "Not Disclosed"
+
         records.append({
-            "job_id": str(row.get("id", "")),
-            "company": str(row.get("company", "")),
-            "title": str(row.get("title", "")),
-            "url": str(row.get("job_url", "")),
+            "job_id": str(row.get("id") or ""),
+            "company": str(row.get("company") or ""),
+            "title": str(row.get("title") or ""),
+            "url": str(row.get("job_url") or ""),
+            "location": str(row.get("location") or "India"),
+            "description": str(row.get("description") or ""),
+            "source": source_override or str(row.get("site") or "JobSpy"),
+            "salary": salary_str,
         })
     return records
 
