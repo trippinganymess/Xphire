@@ -61,6 +61,15 @@ _GENERATION_CONFIG = types.GenerateContentConfig(
 )
 
 
+# Models to try in order of preference: Gemini 3.5 Flash Lite -> Gemini 3.1 Flash Lite -> Gemma 4 31B
+_MODEL_CANDIDATES = [
+    "gemini-3.5-flash-lite",
+    "gemini-3.1-flash-lite",
+    "gemma-4-31b-it",
+]
+
+
+
 # ---------------------------------------------------------------------------
 # Internal: rate a single job with the Gemini model
 # ---------------------------------------------------------------------------
@@ -78,34 +87,50 @@ async def _enrich_single(
     prompt = _PROMPT.format(company=company, title=title, description=description)
 
     async with semaphore:
-        try:
-            resp = await asyncio.to_thread(
-                client.models.generate_content,
-                model="gemini-2.0-flash-lite",
-                contents=prompt,
-                config=_GENERATION_CONFIG,
-            )
-            parsed: Dict[str, Any] = json.loads(resp.text)
+        success = False
+        last_error = None
 
-            rating = max(1, min(5, int(parsed.get("rating", 3))))
-            job["rating"] = rating
-            job["location"] = str(
-                parsed.get("location") or job.get("location") or _FALLBACK["location"]
-            )
-            job["experience"] = str(parsed.get("experience") or _FALLBACK["experience"])
-            job["salary"] = str(parsed.get("salary") or _FALLBACK["salary"])
+        for model_name in _MODEL_CANDIDATES:
+            try:
+                resp = await asyncio.to_thread(
+                    client.models.generate_content,
+                    model=model_name,
+                    contents=prompt,
+                    config=_GENERATION_CONFIG,
+                )
+                parsed: Dict[str, Any] = json.loads(resp.text)
 
-            stars = "⭐" * rating
-            print(f"  [AI {stars}] {company}: {title}")
+                rating = max(1, min(5, int(parsed.get("rating", 3))))
+                job["rating"] = rating
+                job["location"] = str(
+                    parsed.get("location") or job.get("location") or _FALLBACK["location"]
+                )
+                job["experience"] = str(parsed.get("experience") or _FALLBACK["experience"])
+                job["salary"] = str(parsed.get("salary") or _FALLBACK["salary"])
 
-        except Exception as exc:
-            print(f"  [AI fallback] {company} — {title}: {exc}")
+                stars = "⭐" * rating
+                print(f"  [AI {stars}] {company}: {title} (via {model_name})")
+                success = True
+                break
+            except Exception as exc:
+                last_error = exc
+                err_str = str(exc)
+                if "429" in err_str or "RESOURCE_EXHAUSTED" in err_str:
+                    # Model limit reached or model not available on free tier, try next candidate
+                    continue
+                else:
+                    # Other error, try next candidate or fail to fallback
+                    continue
+
+        if not success:
+            print(f"  [AI fallback] {company} — {title}: {last_error}")
             job.setdefault("rating", _FALLBACK["rating"])
             job.setdefault("location", job.get("location") or _FALLBACK["location"])
             job.setdefault("experience", _FALLBACK["experience"])
             job.setdefault("salary", _FALLBACK["salary"])
 
     return job
+
 
 
 # ---------------------------------------------------------------------------
@@ -144,7 +169,7 @@ async def enrich_jobs(jobs: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     # 5 concurrent Gemini calls — stays well within free-tier rate limits
     semaphore = asyncio.Semaphore(5)
 
-    print(f"\n[AI] Enriching {len(jobs)} new job(s) via Gemini 2.0 Flash Lite...")
+    print(f"\n[AI] Enriching {len(jobs)} new job(s) via Gemini AI pipeline...")
     tasks = [_enrich_single(client, job, semaphore) for job in jobs]
     results = await asyncio.gather(*tasks, return_exceptions=True)
 
