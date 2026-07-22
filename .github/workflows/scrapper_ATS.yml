@@ -30,9 +30,14 @@ jobs:
           # Optional: Use a dedicated secret for your new sheet's Google Form URL
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GOOGLE_FORM_URL: ${{ secrets.GOOGLE_FORM_URL }}
           GOOGLE_ENTRY_COMPANY: ${{ secrets.GOOGLE_ENTRY_COMPANY }}
           GOOGLE_ENTRY_TITLE: ${{ secrets.GOOGLE_ENTRY_TITLE }}
           GOOGLE_ENTRY_LINK: ${{ secrets.GOOGLE_ENTRY_LINK }}
+          GOOGLE_ENTRY_LOCATION: ${{ secrets.GOOGLE_ENTRY_LOCATION }}
+          GOOGLE_ENTRY_EXPERIENCE: ${{ secrets.GOOGLE_ENTRY_EXPERIENCE }}
+          GOOGLE_ENTRY_SALARY: ${{ secrets.GOOGLE_ENTRY_SALARY }}
+          GOOGLE_ENTRY_SOURCE: ${{ secrets.GOOGLE_ENTRY_SOURCE }}
         run: python worker_ats.py
