@@ -33,7 +33,7 @@ _FALLBACK: Dict[str, Any] = {
 # Prompt template
 # ---------------------------------------------------------------------------
 _PROMPT = """\
-You are a job market analyst for the Indian tech industry.
+You are a strict job market analyst for the Indian tech industry.
 Evaluate the job posting below and return ONLY a valid JSON object — no markdown, no code fences, no explanation.
 
 Company: {company}

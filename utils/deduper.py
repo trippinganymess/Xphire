@@ -98,13 +98,17 @@ class Deduper:
               ADD COLUMN IF NOT EXISTS experience TEXT,
               ADD COLUMN IF NOT EXISTS salary     TEXT,
               ADD COLUMN IF NOT EXISTS source     TEXT,
-              ADD COLUMN IF NOT EXISTS rating     INTEGER;
+              ADD COLUMN IF NOT EXISTS rating     INTEGER,
+              ADD COLUMN IF NOT EXISTS scraped_at TIMESTAMPTZ DEFAULT now();
         """
         if not self.supabase_url or not self.supabase_key or not jobs:
             return
 
         headers = {**self.write_headers, "Prefer": "resolution=merge-duplicates"}
         url = f"{self.supabase_url.rstrip('/')}/rest/v1/Seen_job"
+
+        from datetime import datetime, timezone
+        now_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
         payload = [
             {
@@ -117,6 +121,7 @@ class Deduper:
                 "salary":     job.get("salary", ""),
                 "source":     job.get("source", ""),
                 "rating":     job.get("rating", 3),
+                "scraped_at": now_iso,
             }
             for job in jobs
         ]
@@ -127,6 +132,17 @@ class Deduper:
                 resp = await client.post(url, headers=headers, json=chunk, timeout=10.0)
                 if resp.status_code in (200, 201):
                     print(f"  [SUPABASE] Saved {len(chunk)} enriched records.")
+                elif resp.status_code == 400 and "PGRST204" in resp.text:
+                    # Table exists but extra columns (company, title, etc.) aren't created yet.
+                    # Fallback to minimal payload (job_id only) so deduplication vault still works!
+                    print(f"  [SUPABASE] Extra columns missing in 'Seen_job' table. Falling back to minimal job_id schema...")
+                    min_headers = {**self.write_headers, "Prefer": "resolution=ignore-duplicates"}
+                    min_payload = [{"job_id": job["job_id"]} for job in chunk]
+                    min_resp = await client.post(url, headers=min_headers, json=min_payload, timeout=10.0)
+                    if min_resp.status_code in (200, 201):
+                        print(f"  [SUPABASE] Saved {len(chunk)} job IDs (minimal schema).")
+                    else:
+                        print(f"  [ERROR] Failed to save minimal schema to Supabase ({min_resp.status_code}): {min_resp.text}")
                 else:
                     print(f"  [ERROR] Failed to save to Supabase ({resp.status_code}): {resp.text}")
             except Exception as exc:
