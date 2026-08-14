@@ -4,12 +4,28 @@ on:
   workflow_dispatch:
     inputs:
       job_title:
-        description: 'Job title to search (e.g. Backend Engineer, ML Engineer)'
+        description: 'Job title to search (e.g. Software Engineer, Backend Engineer)'
         required: true
         default: 'Software Engineer'
       recipient_email:
         description: 'Email address to deliver results to'
         required: true
+      freshers_only:
+        type: boolean
+        description: 'Filter for Fresher / Entry-Level / Internship roles only'
+        required: false
+        default: false
+      min_stars:
+        type: choice
+        description: 'Minimum company star rating (1-5)'
+        required: false
+        default: '3'
+        options:
+          - '1'
+          - '2'
+          - '3'
+          - '4'
+          - '5'
 
 jobs:
   email-pipeline:
@@ -34,6 +50,8 @@ jobs:
           PYTHONUNBUFFERED: "1"
           JOB_TITLE: ${{ github.event.inputs.job_title }}
           RECIPIENT_EMAIL: ${{ github.event.inputs.recipient_email }}
+          FRESHERS_ONLY: ${{ github.event.inputs.freshers_only }}
+          MIN_STARS: ${{ github.event.inputs.min_stars }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}

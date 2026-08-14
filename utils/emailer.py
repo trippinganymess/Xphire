@@ -5,7 +5,12 @@ from email.mime.text import MIMEText
 from typing import List, Dict, Any
 
 
-def build_html_email(jobs: List[Dict[str, Any]], search_title: str) -> str:
+def build_html_email(
+    jobs: List[Dict[str, Any]],
+    search_title: str,
+    freshers_only: bool = False,
+    min_stars: int = 1,
+) -> str:
     stars_map = {1: "#ef4444", 2: "#f97316", 3: "#eab308", 4: "#22c55e", 5: "#10b981"}
 
     def rating_badge(rating: int) -> str:
@@ -80,6 +85,12 @@ def build_html_email(jobs: List[Dict[str, Any]], search_title: str) -> str:
           </td>
         </tr>"""
 
+    filter_badges = ""
+    if freshers_only:
+        filter_badges += '<span style="display:inline-block;background:#1d4ed8;color:#ffffff;font-size:11px;font-weight:700;padding:4px 10px;border-radius:6px;margin-right:6px;margin-bottom:8px;letter-spacing:0.5px;">🎓 FRESHERS ONLY</span>'
+    if min_stars > 1:
+        filter_badges += f'<span style="display:inline-block;background:#374151;color:#fbbf24;font-size:11px;font-weight:700;padding:4px 10px;border-radius:6px;margin-bottom:8px;letter-spacing:0.5px;">⭐ {min_stars}+ STARS</span>'
+
     count = len(jobs)
     return f"""<!DOCTYPE html>
 <html lang="en">
@@ -109,6 +120,7 @@ def build_html_email(jobs: List[Dict[str, Any]], search_title: str) -> str:
                       {search_title}<br/>
                       <span style="color:#58a6ff;">Opportunities</span>
                     </h1>
+                    {f'<div style="margin:8px 0 12px;">{filter_badges}</div>' if filter_badges else ''}
                     <p style="margin:0;font-size:14px;color:#8b949e;line-height:1.6;">
                       {count} fresh role{"s" if count != 1 else ""} curated and AI-scored just for you.
                       Ratings reflect company quality on a 1–5 scale.

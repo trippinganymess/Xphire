@@ -2,12 +2,14 @@
 FreshLab Unified Email Pipeline.
 
 Single worker that:
-  1. Checks the Supabase cache for recent results
-  2. If cache misses, scrapes via JobSpy (Google, LinkedIn, Indeed)
+  1. Parses search inputs (job_title, recipient_email, freshers_only, min_stars)
+  2. Checks the Supabase cache for recent matching results (< 6h old, min_stars, freshers_only)
+  3. If cache misses, scrapes via JobSpy (Google Jobs, LinkedIn, Indeed)
      AND via direct ATS APIs (Greenhouse, Lever, Ashby, SmartRecruiters)
-  3. Deduplicates against Supabase
-  4. Enriches via Gemini AI
-  5. Sends a styled HTML email digest
+  4. Deduplicates against Supabase
+  5. Enriches via Gemini AI (rating 1-5, location, experience, salary)
+  6. Filters by minimum star rating & fresher status
+  7. Sends a styled HTML email digest
 
 Designed to run entirely on GitHub Actions (ubuntu-latest).
 """
@@ -43,8 +45,9 @@ SCRAPERS        = ["google", "linkedin", "indeed"]
 deduper = Deduper()
 
 # ============================================================================
-# ATS TARGET SLUGS  (carried over from worker_ats.py)
+# EXPANDED ATS TARGET SLUGS
 # ============================================================================
+# Greenhouse (150+ tech companies & startups hiring in India / globally)
 GREENHOUSE_SLUGS = [
     "razorpay", "phonepe", "groww", "swiggy", "zepto", "meesho", "postman",
     "curefit", "slice", "cred", "urbancompany", "nykaa", "blinkit",
@@ -66,8 +69,17 @@ GREENHOUSE_SLUGS = [
     "epicgames", "unity", "elastic", "dropbox", "gusto", "hubspot", "evernote",
     "airtable", "atlassian", "adobe", "nutanix", "zscaler", "cisco", "vmware",
     "splunk", "crowdstrike", "paloaltonetworks", "fortinet", "sophos", "mulesoft",
+    "branch", "clari", "harness", "lucid", "mux", "pagerduty", "quora",
+    "rubrik", "sentry", "sourcegraph", "sumologic", "toast", "verkada",
+    "zoominfo", "zynga", "navan", "brex", "checkr", "benchling", "scaleapi",
+    "anduril", "affirm", "chime", "sofi", "wealthfront", "gemini", "kraken",
+    "ripple", "paxos", "chainalysis", "bolt", "samsara", "braze", "intercom",
+    "heap", "launchdarkly", "mparticle", "optimizely", "dynatrace", "newrelic",
+    "grafana", "honeycomb", "cribl", "chronosphere", "logicmonitor", "bigid",
+    "snyk", "wiz", "orca", "lacework", "tanium", "sentinelone", "cybereason",
 ]
 
+# Lever (100+ top companies & high-growth scaleups)
 LEVER_SLUGS = [
     "spotify", "palantir", "netflix", "mindtickle", "clear", "remote",
     "loom", "zalando", "thoughtworks", "lever", "yelp", "eventbrite",
@@ -77,9 +89,16 @@ LEVER_SLUGS = [
     "mural", "sketch", "zeplin", "marvel", "balsamiq", "klook", "klarna",
     "wix", "xero", "substack", "patreon", "peloton", "glossier", "tubi",
     "duolingo", "masterclass", "outschool", "udacity", "1password",
-    "algolia", "iterable", "g2", "kpmg",
+    "algolia", "iterable", "g2", "kpmg", "deliveroo", "getir", "gorillas",
+    "tier", "voi", "helbiz", "bird", "lime", "superhuman", "vanta",
+    "ironclad", "zenefits", "papayaglobal", "oysterhr", "omnipresent",
+    "shippo", "starlingbank", "oaknorth", "n26", "trade-republic",
+    "bitpanda", "ledger", "bitstamp", "consensys", "rarible", "dapperlabs",
+    "immutable", "animocabrands", "sky-mavis", "sorare", "axon", "formlabs",
+    "whoop", "oura", "levels", "eight-sleep", "tempo", "tonal",
 ]
 
+# Ashby (110+ modern AI startups, devtools & modern platforms)
 ASHBY_SLUGS = [
     "notion", "ramp", "replit", "scale", "linear", "vercel", "perplexity",
     "temporal", "modal", "openai", "cartesia", "parspec", "anthropic",
@@ -90,64 +109,116 @@ ASHBY_SLUGS = [
     "alchemy", "opensea", "polygon", "uniswap", "a16z", "sequoia",
     "ycombinator", "beehiiv", "gumroad", "lottiefiles", "raycast", "superhuman",
     "warp", "flyio", "planetscale", "supabase", "clerk", "pinecone", "milvus",
+    "cursor", "anysphere", "mistral", "together", "groq", "baseten", "fireworks",
+    "deepinfra", "fal", "replicate", "resend", "mintlify", "dub", "cal",
+    "langchain", "llamaindex", "chroma", "weaviate", "qdrant", "neon", "turso",
+    "upstash", "inngest", "trigger", "highlight", "axiom", "openmeter", "polar",
+    "speakeasy", "outerbounds", "coactive", "decagon", "sierra", "tavily",
+    "e2b", "phidata", "mem0", "unstructured", "agentops", "cleanlab",
+    "humanloop", "ragas", "truera", "helicone", "lunary", "portkey",
+    "langfuse", "openpipe",
 ]
 
+# SmartRecruiters (60+ enterprise & multinational tech employers)
 SMARTRECRUITERS_SLUGS = [
     "square", "visa", "bosch", "ubisoft", "twitter", "linkedin", "ikea",
     "equinox", "colliers", "biogen", "blueorigin", "smartrecruiters", "sgs",
     "averydennison", "mcdonalds", "loreal", "marcjacobs", "deloitte", "pwc",
     "kaiserpermanente", "autodesk", "nielsen", "jll", "cbre", "mattel",
+    "valeo", "alstom", "schneider-electric", "siemens", "abb", "honeywell",
+    "hitachi", "cisco", "philips", "sony", "canon", "panasonic", "experian",
+    "equifax", "transunion", "wolterskluwer", "relx", "reedelsevier",
+    "thomsonreuters", "bloomberg", "factset", "morningstar", "spglobal",
+    "moodys", "fitchratings", "blackrock", "vanguard", "statestreet",
+    "fidelity", "charlesschwab", "ameritrade", "etrade", "interactivebrokers",
 ]
 
 # ============================================================================
-# ATS FILTERING  (for ATS-sourced jobs — title/location relevance check)
+# FILTERING PATTERNS
 # ============================================================================
-TITLE_PATTERN = re.compile(
+INDIA_PATTERN = re.compile(
+    r"\b(india|bengaluru|bangalore|mumbai|delhi|ncr|gurugram|gurgaon|noida|pune|hyderabad|chennai|remote)\b",
+    re.IGNORECASE,
+)
+
+TECH_PATTERN = re.compile(
     r"\b(engineer|developer|backend|frontend|fullstack|data|devops|sre|ml|ai|software|qa|systems|scientist|analyst)\b",
     re.IGNORECASE,
 )
 
+FRESHER_PATTERN = re.compile(
+    r"\b(intern|internship|fresher|entry[\s-]?level|graduate|grad|0[\s-]?1[\s-]?yr|0[\s-]?2[\s-]?yr|junior|jr|trainee|associate|early[\s-]?career)\b",
+    re.IGNORECASE,
+)
 
-def _is_relevant_ats_job(title: str, location: str, search_title: str) -> bool:
-    """Check if an ATS job is relevant to the search title and located in India."""
+
+def is_fresher_job(job: Dict[str, Any]) -> bool:
+    """Check if a job dictionary matches fresher / entry-level / intern criteria."""
+    title = str(job.get("title") or "")
+    experience = str(job.get("experience") or "")
+    description = str(job.get("description") or "")[:500]
+
+    # 1. Match title
+    if FRESHER_PATTERN.search(title):
+        return True
+
+    # 2. Match AI-extracted experience
+    if FRESHER_PATTERN.search(experience) or "fresher" in experience.lower() or "0-1" in experience or "0-2" in experience:
+        return True
+
+    # 3. Match opening description lines
+    if FRESHER_PATTERN.search(description):
+        return True
+
+    return False
+
+
+def _is_relevant_ats_job(
+    title: str,
+    location: str,
+    search_title: str,
+    freshers_only: bool = False,
+) -> bool:
+    """Check if an ATS job is relevant to the search title, location, and fresher criteria."""
     loc_str = str(location or "India")
     title_str = str(title or "")
     search_lower = search_title.lower()
 
-    # Location must mention India or a major Indian city or Remote
-    india_pattern = re.compile(
-        r"\b(india|bengaluru|bangalore|mumbai|delhi|ncr|gurugram|gurgaon|noida|pune|hyderabad|chennai|remote)\b",
-        re.IGNORECASE,
-    )
-    if not india_pattern.search(loc_str):
+    # Location must match India or major Indian tech hubs or Remote
+    if not INDIA_PATTERN.search(loc_str):
         return False
 
     # Title must be tech-related
-    if not TITLE_PATTERN.search(title_str):
+    if not TECH_PATTERN.search(title_str):
         return False
 
-    # Title should have some keyword overlap with the search title
-    search_keywords = set(search_lower.split())
-    title_keywords = set(title_str.lower().split())
-    if search_keywords & title_keywords:
-        return True
+    # If user asked for freshers only, title must match fresher criteria
+    if freshers_only and not FRESHER_PATTERN.search(title_str):
+        return False
 
-    # Fallback: at least it's a tech role in India
+    # Keyword overlap check between search title and role title
+    search_keywords = {w for w in search_lower.split() if len(w) > 2}
+    title_keywords = {w for w in title_str.lower().split() if len(w) > 2}
+    if search_keywords and not (search_keywords & title_keywords):
+        # Allow if search is generic like "Software Engineer" or "Intern"
+        if not ("software" in search_lower or "engineer" in search_lower or "developer" in search_lower):
+            return False
+
     return True
 
 
 # ============================================================================
-# ATS FETCHERS  (carried over from worker_ats.py)
+# ATS FETCHERS
 # ============================================================================
 async def _safe_get(client, url, semaphore):
     async with semaphore:
         try:
-            return await client.get(url, timeout=15.0)
+            return await client.get(url, timeout=12.0)
         except Exception:
             return None
 
 
-async def _fetch_greenhouse(client, slug, semaphore, search_title) -> List[Dict[str, Any]]:
+async def _fetch_greenhouse(client, slug, semaphore, search_title, freshers_only) -> List[Dict[str, Any]]:
     url = f"https://boards-api.greenhouse.io/v1/boards/{slug}/jobs?content=false"
     resp = await _safe_get(client, url, semaphore)
     if not resp or resp.status_code != 200:
@@ -158,7 +229,7 @@ async def _fetch_greenhouse(client, slug, semaphore, search_title) -> List[Dict[
         title = j.get("title", "")
         loc = j.get("location", {}).get("name", "")
         j_url = j.get("absolute_url", "")
-        if _is_relevant_ats_job(title, loc, search_title):
+        if _is_relevant_ats_job(title, loc, search_title, freshers_only):
             jobs.append({
                 "job_id":  deduper.generate_job_id(slug, title, j_url),
                 "company": slug,
@@ -170,7 +241,7 @@ async def _fetch_greenhouse(client, slug, semaphore, search_title) -> List[Dict[
     return jobs
 
 
-async def _fetch_lever(client, slug, semaphore, search_title) -> List[Dict[str, Any]]:
+async def _fetch_lever(client, slug, semaphore, search_title, freshers_only) -> List[Dict[str, Any]]:
     url = f"https://api.lever.co/v0/postings/{slug}?mode=json"
     resp = await _safe_get(client, url, semaphore)
     if not resp or resp.status_code != 200:
@@ -181,7 +252,7 @@ async def _fetch_lever(client, slug, semaphore, search_title) -> List[Dict[str, 
         title = j.get("text", "")
         loc = j.get("categories", {}).get("location", "")
         j_url = j.get("hostedUrl", "")
-        if _is_relevant_ats_job(title, loc, search_title):
+        if _is_relevant_ats_job(title, loc, search_title, freshers_only):
             jobs.append({
                 "job_id":  deduper.generate_job_id(slug, title, j_url),
                 "company": slug,
@@ -193,7 +264,7 @@ async def _fetch_lever(client, slug, semaphore, search_title) -> List[Dict[str, 
     return jobs
 
 
-async def _fetch_ashby(client, slug, semaphore, search_title) -> List[Dict[str, Any]]:
+async def _fetch_ashby(client, slug, semaphore, search_title, freshers_only) -> List[Dict[str, Any]]:
     url = f"https://api.ashbyhq.com/gcs/v1/deb/organization/{slug}/job-board"
     resp = await _safe_get(client, url, semaphore)
     if not resp or resp.status_code != 200:
@@ -204,7 +275,7 @@ async def _fetch_ashby(client, slug, semaphore, search_title) -> List[Dict[str, 
         title = j.get("title", "")
         loc = j.get("locationName", "")
         j_url = j.get("jobUrl", "")
-        if _is_relevant_ats_job(title, loc, search_title):
+        if _is_relevant_ats_job(title, loc, search_title, freshers_only):
             jobs.append({
                 "job_id":  deduper.generate_job_id(slug, title, j_url),
                 "company": slug,
@@ -216,7 +287,7 @@ async def _fetch_ashby(client, slug, semaphore, search_title) -> List[Dict[str, 
     return jobs
 
 
-async def _fetch_smartrecruiters(client, slug, semaphore, search_title) -> List[Dict[str, Any]]:
+async def _fetch_smartrecruiters(client, slug, semaphore, search_title, freshers_only) -> List[Dict[str, Any]]:
     url = f"https://api.smartrecruiters.com/v1/companies/{slug}/postings"
     resp = await _safe_get(client, url, semaphore)
     if not resp or resp.status_code != 200:
@@ -227,7 +298,7 @@ async def _fetch_smartrecruiters(client, slug, semaphore, search_title) -> List[
         title = j.get("name", "")
         loc = j.get("location", {}).get("city", "")
         j_url = f"https://jobs.smartrecruiters.com/{slug}/{j.get('id')}"
-        if _is_relevant_ats_job(title, loc, search_title):
+        if _is_relevant_ats_job(title, loc, search_title, freshers_only):
             jobs.append({
                 "job_id":  deduper.generate_job_id(slug, title, j_url),
                 "company": slug,
@@ -240,41 +311,52 @@ async def _fetch_smartrecruiters(client, slug, semaphore, search_title) -> List[
 
 
 # ============================================================================
-# ATS PIPELINE  (query all ATS endpoints for a given search title)
+# ATS PIPELINE
 # ============================================================================
-async def scrape_ats(client, search_title: str) -> List[Dict[str, Any]]:
+async def scrape_ats(client, search_title: str, freshers_only: bool = False) -> List[Dict[str, Any]]:
     """Hit Greenhouse / Lever / Ashby / SmartRecruiters for relevant jobs."""
-    print(f"\n[ATS] Scanning ATS endpoints for '{search_title}'...")
-    semaphore = asyncio.Semaphore(15)
+    total_endpoints = (
+        len(GREENHOUSE_SLUGS) + len(LEVER_SLUGS)
+        + len(ASHBY_SLUGS) + len(SMARTRECRUITERS_SLUGS)
+    )
+    print(f"\n[ATS] Scanning {total_endpoints} ATS endpoints for '{search_title}' (Freshers: {freshers_only})...")
+    semaphore = asyncio.Semaphore(25)
 
     tasks = []
     for slug in GREENHOUSE_SLUGS:
-        tasks.append(_fetch_greenhouse(client, slug, semaphore, search_title))
+        tasks.append(_fetch_greenhouse(client, slug, semaphore, search_title, freshers_only))
     for slug in LEVER_SLUGS:
-        tasks.append(_fetch_lever(client, slug, semaphore, search_title))
+        tasks.append(_fetch_lever(client, slug, semaphore, search_title, freshers_only))
     for slug in ASHBY_SLUGS:
-        tasks.append(_fetch_ashby(client, slug, semaphore, search_title))
+        tasks.append(_fetch_ashby(client, slug, semaphore, search_title, freshers_only))
     for slug in SMARTRECRUITERS_SLUGS:
-        tasks.append(_fetch_smartrecruiters(client, slug, semaphore, search_title))
+        tasks.append(_fetch_smartrecruiters(client, slug, semaphore, search_title, freshers_only))
 
     results = await asyncio.gather(*tasks)
     all_ats = [job for sublist in results if sublist for job in sublist]
-    print(f"[ATS] Found {len(all_ats)} relevant jobs across ATS endpoints.")
+    print(f"[ATS] Discovered {len(all_ats)} matching jobs across ATS endpoints.")
     return all_ats
 
 
 # ============================================================================
 # CACHE LOOKUP
 # ============================================================================
-async def check_db_cache(client, title: str) -> list:
+async def check_db_cache(
+    client,
+    title: str,
+    freshers_only: bool = False,
+    min_stars: int = 1,
+) -> list:
     if not deduper.supabase_url or not deduper.supabase_key:
         return []
 
     encoded = title.replace(" ", "%20")
+    rating_filter = f"&rating=gte.{min_stars}" if min_stars > 1 else ""
     url = (
         f"{deduper.supabase_url.rstrip('/')}/rest/v1/Seen_job"
         f"?select=company,title,url,location,experience,salary,source,rating"
         f"&title=ilike.*{encoded}*"
+        f"{rating_filter}"
         f"&scraped_at=gte.{_hours_ago_iso(CACHE_HOURS)}"
         f"&order=rating.desc"
         f"&limit=50"
@@ -283,13 +365,15 @@ async def check_db_cache(client, title: str) -> list:
         resp = await client.get(url, headers=deduper.read_headers, timeout=10.0)
         if resp.status_code == 200:
             rows = resp.json()
+            if freshers_only and rows:
+                rows = [r for r in rows if is_fresher_job(r)]
             if rows:
-                print(f"[CACHE] HIT — {len(rows)} cached jobs for '{title}' (< {CACHE_HOURS}h old)")
+                print(f"[CACHE] HIT — {len(rows)} cached jobs for '{title}' (≥{min_stars}★, < {CACHE_HOURS}h old)")
                 return rows
     except Exception as exc:
         print(f"[CACHE] Query failed: {exc}")
 
-    print(f"[CACHE] MISS — no fresh results for '{title}'. Running scrapers...")
+    print(f"[CACHE] MISS — no fresh cached results for '{title}'. Running scrapers...")
     return []
 
 
@@ -302,9 +386,10 @@ def _hours_ago_iso(hours: int) -> str:
 # ============================================================================
 # JOBSPY SCRAPER
 # ============================================================================
-async def scrape_jobspy(title: str, proxy_list: list) -> list:
+async def scrape_jobspy(title: str, proxy_list: list, freshers_only: bool = False) -> list:
     """Scrape via JobSpy (Google Jobs, LinkedIn, Indeed)."""
-    print(f"\n[SCRAPE] Starting JobSpy scrape for '{title}' across {SCRAPERS}...")
+    search_query = f"{title} Fresher" if freshers_only and "fresher" not in title.lower() and "intern" not in title.lower() else title
+    print(f"\n[SCRAPE] Starting JobSpy scrape for '{search_query}' across {SCRAPERS}...")
     site_order = SCRAPERS.copy()
     random.shuffle(site_order)
     frames = []
@@ -315,8 +400,8 @@ async def scrape_jobspy(title: str, proxy_list: list) -> list:
             df = await asyncio.to_thread(
                 scrape_jobs,
                 site_name=[site],
-                search_term=title,
-                google_search_term=build_google_search_term(title),
+                search_term=search_query,
+                google_search_term=build_google_search_term(search_query),
                 location="India",
                 country_indeed=COUNTRY_INDEED,
                 results_wanted=15,
@@ -350,8 +435,16 @@ async def scrape_jobspy(title: str, proxy_list: list) -> list:
 # MAIN PIPELINE
 # ============================================================================
 async def main():
-    job_title       = os.environ.get("JOB_TITLE", "").strip()
-    recipient_email = os.environ.get("RECIPIENT_EMAIL", "").strip()
+    job_title         = os.environ.get("JOB_TITLE", "").strip()
+    recipient_email   = os.environ.get("RECIPIENT_EMAIL", "").strip()
+    freshers_only_raw = os.environ.get("FRESHERS_ONLY", "false").strip().lower()
+    freshers_only     = freshers_only_raw in ("true", "1", "yes")
+
+    try:
+        min_stars = int(os.environ.get("MIN_STARS", "3").strip() or "3")
+        min_stars = max(1, min(5, min_stars))
+    except ValueError:
+        min_stars = 3
 
     if not job_title:
         print("[ERROR] JOB_TITLE env var is required.")
@@ -362,22 +455,37 @@ async def main():
 
     print("=" * 60)
     print(f"  FreshLab Unified Pipeline")
-    print(f"  Title   : {job_title}")
-    print(f"  Recipient: {recipient_email}")
+    print(f"  Title        : {job_title}")
+    print(f"  Recipient    : {recipient_email}")
+    print(f"  Freshers Only: {freshers_only}")
+    print(f"  Min Stars    : {min_stars}★")
     print("=" * 60)
 
     proxy_list = parse_proxy_list()
 
     async with create_stealth_client() as client:
-        # ── Step 1: Check cache ────────────────────────────────────────
-        jobs = await check_db_cache(client, job_title)
+        # ── Step 1: Check database cache ────────────────────────────────
+        jobs = await check_db_cache(
+            client,
+            job_title,
+            freshers_only=freshers_only,
+            min_stars=min_stars,
+        )
 
         if not jobs:
             # ── Step 2a: Scrape via JobSpy ─────────────────────────────
-            jobspy_results = await scrape_jobspy(job_title, proxy_list)
+            jobspy_results = await scrape_jobspy(
+                job_title,
+                proxy_list,
+                freshers_only=freshers_only,
+            )
 
             # ── Step 2b: Scrape via ATS APIs ───────────────────────────
-            ats_results = await scrape_ats(client, job_title)
+            ats_results = await scrape_ats(
+                client,
+                job_title,
+                freshers_only=freshers_only,
+            )
 
             # ── Step 3: Combine all sources ────────────────────────────
             all_scraped = jobspy_results + ats_results
@@ -392,26 +500,50 @@ async def main():
             new_jobs = await deduper.get_unseen_jobs(client, all_scraped)
 
             if new_jobs:
+                # ── Step 5: AI Reviewer & Enrichment ───────────────────
                 new_jobs = await enrich_jobs(new_jobs)
                 await deduper.save_seen_jobs(client, new_jobs)
                 jobs = new_jobs
             else:
                 print("[PIPELINE] All scraped jobs already in DB. Fetching best from cache...")
-                jobs = await check_db_cache(client, job_title) or all_scraped[:MAX_EMAIL_JOBS]
+                cached = await check_db_cache(
+                    client,
+                    job_title,
+                    freshers_only=freshers_only,
+                    min_stars=min_stars,
+                )
+                jobs = cached or all_scraped
+
+        # ── Step 6: Post-enrichment filtering (Freshers & Min Stars) ───
+        if freshers_only:
+            before_fresher = len(jobs)
+            jobs = [j for j in jobs if is_fresher_job(j)]
+            print(f"[FILTER] Freshers filter: {before_fresher} → {len(jobs)} jobs")
+
+        if min_stars > 1:
+            before_stars = len(jobs)
+            jobs = [j for j in jobs if int(j.get("rating", 3)) >= min_stars]
+            print(f"[FILTER] Rating ≥ {min_stars}★ filter: {before_stars} → {len(jobs)} jobs")
 
     if not jobs:
-        print("[PIPELINE] Nothing to email.")
+        print("[PIPELINE] No jobs matched all criteria (Freshers/Min Stars). Nothing to email.")
         return
 
-    # ── Step 5: Build and send email ───────────────────────────────────
+    # ── Step 7: Build and send email ───────────────────────────────────
     top_jobs = jobs[:MAX_EMAIL_JOBS]
     print(f"\n[EMAIL] Building digest for {len(top_jobs)} jobs...")
 
-    html    = build_html_email(top_jobs, job_title)
-    subject = f"🚀 {len(top_jobs)} {job_title} Roles · FreshLab AI"
+    html = build_html_email(
+        top_jobs,
+        job_title,
+        freshers_only=freshers_only,
+        min_stars=min_stars,
+    )
+    badge_str = " (Freshers Only)" if freshers_only else ""
+    subject = f"🚀 {len(top_jobs)} {job_title} Roles{badge_str} · {min_stars}+ ⭐ · FreshLab AI"
 
     send_email(html, subject, recipient_email)
-    print("\n[COMPLETE] Unified pipeline finished.")
+    print("\n[COMPLETE] Unified pipeline finished successfully.")
 
 
 if __name__ == "__main__":
