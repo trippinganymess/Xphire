@@ -152,7 +152,7 @@ def build_html_email(jobs: List[Dict[str, Any]], search_title: str) -> str:
 
 def send_email(html: str, subject: str, recipient: str) -> None:
     host     = os.environ.get("SMTP_HOST", "smtp.gmail.com")
-    port     = int(os.environ.get("SMTP_PORT", "587"))
+    port     = int(os.environ.get("SMTP_PORT", "465"))
     user     = os.environ.get("SMTP_USER", "")
     password = os.environ.get("SMTP_PASSWORD", "")
 
@@ -166,10 +166,29 @@ def send_email(html: str, subject: str, recipient: str) -> None:
     msg["To"]      = recipient
     msg.attach(MIMEText(html, "html", "utf-8"))
 
-    with smtplib.SMTP(host, port) as server:
-        server.ehlo()
-        server.starttls()
-        server.login(user, password)
-        server.sendmail(user, recipient, msg.as_string())
+    max_retries = 3
+    for attempt in range(1, max_retries + 1):
+        try:
+            # Prefer SMTP_SSL (port 465) — establishes TLS immediately and is
+            # more reliable on GitHub Actions hosted runners than STARTTLS.
+            if port == 465:
+                with smtplib.SMTP_SSL(host, port) as server:
+                    server.login(user, password)
+                    server.sendmail(user, recipient, msg.as_string())
+            else:
+                with smtplib.SMTP(host, port) as server:
+                    server.ehlo()
+                    server.starttls()
+                    server.ehlo()
+                    server.login(user, password)
+                    server.sendmail(user, recipient, msg.as_string())
 
-    print(f"[EMAIL] Sent to {recipient} ✓")
+            print(f"[EMAIL] Sent to {recipient} ✓")
+            return
+        except (smtplib.SMTPServerDisconnected, smtplib.SMTPConnectError, OSError) as exc:
+            print(f"[EMAIL] Attempt {attempt}/{max_retries} failed: {exc}")
+            if attempt < max_retries:
+                import time
+                time.sleep(2 * attempt)  # exponential-ish back-off
+            else:
+                raise
