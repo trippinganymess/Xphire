@@ -1,4 +1,4 @@
-name: FreshLab AI - Email on Demand
+name: Xphire AI - Email on Demand
 
 on:
   workflow_dispatch:

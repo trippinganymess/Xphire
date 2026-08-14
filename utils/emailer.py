@@ -97,7 +97,7 @@ def build_html_email(
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-  <title>FreshLab · {search_title} Jobs</title>
+  <title>Xphire · {search_title} Jobs</title>
 </head>
 <body style="margin:0;padding:0;background:#0d1117;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#0d1117;padding:32px 16px;">
@@ -114,7 +114,7 @@ def build_html_email(
                 <tr>
                   <td style="padding:32px 32px 28px;">
                     <p style="margin:0 0 6px;font-size:12px;font-weight:700;color:#58a6ff;
-                      text-transform:uppercase;letter-spacing:2px;">FreshLab AI · Job Scout</p>
+                      text-transform:uppercase;letter-spacing:2px;">Xphire AI · Job Scout</p>
                     <h1 style="margin:0 0 10px;font-size:28px;font-weight:800;
                       color:#e6edf3;line-height:1.2;">
                       {search_title}<br/>
@@ -123,7 +123,7 @@ def build_html_email(
                     {f'<div style="margin:8px 0 12px;">{filter_badges}</div>' if filter_badges else ''}
                     <p style="margin:0;font-size:14px;color:#8b949e;line-height:1.6;">
                       {count} fresh role{"s" if count != 1 else ""} curated and AI-scored just for you.
-                      Ratings reflect company quality on a 1–5 scale.
+                      Ratings reflect company quality on a 1-5 scale.
                     </p>
                   </td>
                 </tr>
@@ -142,7 +142,7 @@ def build_html_email(
                 <tr>
                   <td style="padding:24px 0;text-align:center;">
                     <p style="margin:0 0 4px;font-size:12px;color:#8b949e;">
-                      Powered by <strong style="color:#58a6ff;">FreshLab AI</strong>
+                      Powered by <strong style="color:#58a6ff;">Xphire AI</strong>
                       · Scraped from LinkedIn, Indeed &amp; Google Jobs
                     </p>
                     <p style="margin:0;font-size:11px;color:#484f58;">
@@ -169,19 +169,19 @@ def send_email(html: str, subject: str, recipient: str) -> None:
     password = os.environ.get("SMTP_PASSWORD", "")
 
     if not user or not password:
-        print("[EMAIL] SMTP_USER or SMTP_PASSWORD not set — skipping send.")
+        print("[EMAIL] SMTP_USER or SMTP_PASSWORD not set - skipping send.")
         return
 
     msg = MIMEMultipart("alternative")
     msg["Subject"] = subject
-    msg["From"]    = f"FreshLab AI <{user}>"
+    msg["From"]    = f"Xphire AI <{user}>"
     msg["To"]      = recipient
     msg.attach(MIMEText(html, "html", "utf-8"))
 
     max_retries = 3
     for attempt in range(1, max_retries + 1):
         try:
-            # Prefer SMTP_SSL (port 465) — establishes TLS immediately and is
+            # Prefer SMTP_SSL (port 465) - establishes TLS immediately and is
             # more reliable on GitHub Actions hosted runners than STARTTLS.
             if port == 465:
                 with smtplib.SMTP_SSL(host, port) as server:

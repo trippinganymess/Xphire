@@ -1,5 +1,5 @@
 """
-Gemini AI enrichment module for the FreshLab pipeline.
+Gemini AI enrichment module for the Xphire pipeline.
 
 For every new (unseen) job, queries Gemini to extract:
   - rating     : company quality score (integer 1-5)
@@ -34,7 +34,7 @@ _FALLBACK: Dict[str, Any] = {
 # ---------------------------------------------------------------------------
 _PROMPT = """\
 You are a strict job market analyst for the Indian tech industry.
-Evaluate the job posting below and return ONLY a valid JSON object — no markdown, no code fences, no explanation.
+Evaluate the job posting below and return ONLY a valid JSON object - no markdown, no code fences, no explanation.
 
 Company: {company}
 Title: {title}
@@ -53,7 +53,7 @@ Required JSON keys:
 """
 
 # ---------------------------------------------------------------------------
-# Gemini config — JSON mode, low temperature for deterministic extraction
+# Gemini config - JSON mode, low temperature for deterministic extraction
 # ---------------------------------------------------------------------------
 _GENERATION_CONFIG = types.GenerateContentConfig(
     response_mime_type="application/json",
@@ -123,7 +123,7 @@ async def _enrich_single(
                     continue
 
         if not success:
-            print(f"  [AI fallback] {company} — {title}: {last_error}")
+            print(f"  [AI fallback] {company} - {title}: {last_error}")
             job.setdefault("rating", _FALLBACK["rating"])
             job.setdefault("location", job.get("location") or _FALLBACK["location"])
             job.setdefault("experience", _FALLBACK["experience"])
@@ -157,7 +157,7 @@ async def enrich_jobs(jobs: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
 
     api_key = os.environ.get("GEMINI_API_KEY")
     if not api_key:
-        print("[AI] GEMINI_API_KEY not set — applying fallback values to all jobs.")
+        print("[AI] GEMINI_API_KEY not set - applying fallback values to all jobs.")
         for job in jobs:
             job.setdefault("rating", _FALLBACK["rating"])
             job.setdefault("location", job.get("location") or _FALLBACK["location"])
@@ -166,7 +166,7 @@ async def enrich_jobs(jobs: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         return jobs
 
     client = genai.Client(api_key=api_key)
-    # 5 concurrent Gemini calls — stays well within free-tier rate limits
+    # 5 concurrent Gemini calls - stays well within free-tier rate limits
     semaphore = asyncio.Semaphore(5)
 
     print(f"\n[AI] Enriching {len(jobs)} new job(s) via Gemini AI pipeline...")
@@ -176,7 +176,7 @@ async def enrich_jobs(jobs: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     enriched: List[Dict[str, Any]] = []
     for job, result in zip(jobs, results):
         if isinstance(result, Exception):
-            # gather() swallowed an unhandled exception — apply fallback
+            # gather() swallowed an unhandled exception - apply fallback
             print(f"  [AI gather error] {job.get('company')}: {result}")
             job.setdefault("rating", _FALLBACK["rating"])
             job.setdefault("location", job.get("location") or _FALLBACK["location"])

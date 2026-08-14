@@ -1,5 +1,5 @@
 """
-FreshLab Unified Email Pipeline.
+Xphire Unified Email Pipeline.
 
 Single worker that:
   1. Parses search inputs (job_title, recipient_email, freshers_only, min_stars)
@@ -368,12 +368,12 @@ async def check_db_cache(
             if freshers_only and rows:
                 rows = [r for r in rows if is_fresher_job(r)]
             if rows:
-                print(f"[CACHE] HIT — {len(rows)} cached jobs for '{title}' (≥{min_stars}★, < {CACHE_HOURS}h old)")
+                print(f"[CACHE] HIT - {len(rows)} cached jobs for '{title}' (≥{min_stars}★, < {CACHE_HOURS}h old)")
                 return rows
     except Exception as exc:
         print(f"[CACHE] Query failed: {exc}")
 
-    print(f"[CACHE] MISS — no fresh cached results for '{title}'. Running scrapers...")
+    print(f"[CACHE] MISS - no fresh cached results for '{title}'. Running scrapers...")
     return []
 
 
@@ -454,7 +454,7 @@ async def main():
         return
 
     print("=" * 60)
-    print(f"  FreshLab Unified Pipeline")
+    print(f"  Xphire Unified Pipeline")
     print(f"  Title        : {job_title}")
     print(f"  Recipient    : {recipient_email}")
     print(f"  Freshers Only: {freshers_only}")
@@ -464,7 +464,7 @@ async def main():
     proxy_list = parse_proxy_list()
 
     async with create_stealth_client() as client:
-        # ── Step 1: Check database cache ────────────────────────────────
+        # -- Step 1: Check database cache --------------------------------
         jobs = await check_db_cache(
             client,
             job_title,
@@ -473,21 +473,21 @@ async def main():
         )
 
         if not jobs:
-            # ── Step 2a: Scrape via JobSpy ─────────────────────────────
+            # -- Step 2a: Scrape via JobSpy -----------------------------
             jobspy_results = await scrape_jobspy(
                 job_title,
                 proxy_list,
                 freshers_only=freshers_only,
             )
 
-            # ── Step 2b: Scrape via ATS APIs ───────────────────────────
+            # -- Step 2b: Scrape via ATS APIs ---------------------------
             ats_results = await scrape_ats(
                 client,
                 job_title,
                 freshers_only=freshers_only,
             )
 
-            # ── Step 3: Combine all sources ────────────────────────────
+            # -- Step 3: Combine all sources ----------------------------
             all_scraped = jobspy_results + ats_results
 
             if not all_scraped:
@@ -496,11 +496,11 @@ async def main():
 
             print(f"\n[PIPELINE] Combined {len(jobspy_results)} JobSpy + {len(ats_results)} ATS = {len(all_scraped)} total jobs")
 
-            # ── Step 4: Dedup against Supabase ─────────────────────────
+            # -- Step 4: Dedup against Supabase -------------------------
             new_jobs = await deduper.get_unseen_jobs(client, all_scraped)
 
             if new_jobs:
-                # ── Step 5: AI Reviewer & Enrichment ───────────────────
+                # -- Step 5: AI Reviewer & Enrichment -------------------
                 new_jobs = await enrich_jobs(new_jobs)
                 await deduper.save_seen_jobs(client, new_jobs)
                 jobs = new_jobs
@@ -514,22 +514,22 @@ async def main():
                 )
                 jobs = cached or all_scraped
 
-        # ── Step 6: Post-enrichment filtering (Freshers & Min Stars) ───
+        # -- Step 6: Post-enrichment filtering (Freshers & Min Stars) ---
         if freshers_only:
             before_fresher = len(jobs)
             jobs = [j for j in jobs if is_fresher_job(j)]
-            print(f"[FILTER] Freshers filter: {before_fresher} → {len(jobs)} jobs")
+            print(f"[FILTER] Freshers filter: {before_fresher} -> {len(jobs)} jobs")
 
         if min_stars > 1:
             before_stars = len(jobs)
             jobs = [j for j in jobs if int(j.get("rating", 3)) >= min_stars]
-            print(f"[FILTER] Rating ≥ {min_stars}★ filter: {before_stars} → {len(jobs)} jobs")
+            print(f"[FILTER] Rating >= {min_stars}★ filter: {before_stars} -> {len(jobs)} jobs")
 
     if not jobs:
         print("[PIPELINE] No jobs matched all criteria (Freshers/Min Stars). Nothing to email.")
         return
 
-    # ── Step 7: Build and send email ───────────────────────────────────
+    # -- Step 7: Build and send email -----------------------------------
     top_jobs = jobs[:MAX_EMAIL_JOBS]
     print(f"\n[EMAIL] Building digest for {len(top_jobs)} jobs...")
 
@@ -540,7 +540,7 @@ async def main():
         min_stars=min_stars,
     )
     badge_str = " (Freshers Only)" if freshers_only else ""
-    subject = f"🚀 {len(top_jobs)} {job_title} Roles{badge_str} · {min_stars}+ ⭐ · FreshLab AI"
+    subject = f"🚀 {len(top_jobs)} {job_title} Roles{badge_str} · {min_stars}+ ⭐ · Xphire AI"
 
     send_email(html, subject, recipient_email)
     print("\n[COMPLETE] Unified pipeline finished successfully.")

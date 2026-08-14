@@ -1,5 +1,5 @@
 """
-Shared scraping utilities for all FreshLab workers.
+Shared scraping utilities for all Xphire workers.
 
 Centralises: stealth HTTP client, Google Sheets posting, mass-recruiter
 blocklist, proxy parsing, humanised pacing, and Google search term building.
@@ -176,7 +176,7 @@ async def send_batch_to_google_sheet(
 
     Args:
         client: Shared httpx.AsyncClient.
-        jobs: List of enriched job dicts — must contain keys produced by
+        jobs: List of enriched job dicts - must contain keys produced by
               df_to_job_dicts() + enrich_jobs():
               job_id, company, title, url, location, experience, salary,
               source, rating.
@@ -192,7 +192,7 @@ async def send_batch_to_google_sheet(
     entry_source = os.environ.get("GOOGLE_ENTRY_SOURCE")
 
     if not all([form_url, entry_company, entry_title, entry_link]):
-        print("[WARN] Core Google Form env vars missing — skipping sheet sync.")
+        print("[WARN] Core Google Form env vars missing - skipping sheet sync.")
         return
 
     print(f"\nPushing {len(jobs)} enriched entries to Google Sheets...")
@@ -232,7 +232,7 @@ async def send_batch_to_google_sheet(
 
 
 # ============================================================================
-# DATAFRAME → DICT BRIDGE  (for Deduper + AI reviewer integration)
+# DATAFRAME -> DICT BRIDGE  (for Deduper + AI reviewer integration)
 # ============================================================================
 def df_to_job_dicts(df: pd.DataFrame, source_override: str = "") -> list[dict]:
     """
@@ -253,7 +253,7 @@ def df_to_job_dicts(df: pd.DataFrame, source_override: str = "") -> list[dict]:
         max_amt = row.get("max_amount")
         currency = str(row.get("currency") or "").upper()
         if pd.notna(min_amt) and pd.notna(max_amt):
-            salary_str = f"{currency} {int(min_amt):,} – {int(max_amt):,} / yr"
+            salary_str = f"{currency} {int(min_amt):,} - {int(max_amt):,} / yr"
         elif pd.notna(min_amt):
             salary_str = f"{currency} {int(min_amt):,}+"
         else:

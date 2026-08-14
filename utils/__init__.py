@@ -1,1 +1,1 @@
-# Utils package for FreshLab scraping pipeline.
+# Utils package for Xphire scraping pipeline.

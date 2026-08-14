@@ -8,7 +8,7 @@ class Deduper:
     def __init__(self):
         self.supabase_url = os.environ.get("SUPABASE_URL")
         self.supabase_key = os.environ.get("SUPABASE_KEY")
-        # Service role key bypasses Row Level Security — required for INSERT.
+        # Service role key bypasses Row Level Security - required for INSERT.
         # Falls back to anon key if not set (reads still work, writes may 404).
         self.service_key = os.environ.get("SUPABASE_SERVICE_KEY") or self.supabase_key
 
