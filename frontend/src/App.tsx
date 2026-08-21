@@ -23,6 +23,7 @@ export default function App() {
         status={systemStatus}
         userName={user?.name}
         userEmail={user?.email}
+        avatarUrl={user?.avatarUrl}
         onLogout={user ? handleLogout : undefined}
       />
 

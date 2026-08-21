@@ -2,9 +2,23 @@ import { useState, useEffect, useRef, type FormEvent } from 'react';
 import { type SystemStatus } from './SketchHeader';
 import './SketchTerminal.css';
 
+// Load all user avatars from assets/Users
+const avatarModules = import.meta.glob<string>('../assets/Users/*.png', {
+  eager: true,
+  import: 'default',
+});
+const avatarList: string[] = Object.values(avatarModules);
+
+function getRandomAvatar(): string | undefined {
+  if (avatarList.length === 0) return undefined;
+  const randomIndex = Math.floor(Math.random() * avatarList.length);
+  return avatarList[randomIndex];
+}
+
 export interface UserSession {
   name: string;
   email: string;
+  avatarUrl?: string;
 }
 
 interface TerminalLine {
@@ -227,6 +241,7 @@ export default function SketchTerminal({
         const session: UserSession = {
           name: authDraft.name,
           email: authDraft.email,
+          avatarUrl: getRandomAvatar(),
         };
         onLogin(session);
         onStatusChange('online');

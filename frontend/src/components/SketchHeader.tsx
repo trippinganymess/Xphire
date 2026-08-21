@@ -6,6 +6,7 @@ interface SketchHeaderProps {
   status: SystemStatus;
   userName?: string;
   userEmail?: string;
+  avatarUrl?: string;
   onLogout?: () => void;
 }
 
@@ -13,6 +14,7 @@ export default function SketchHeader({
   status,
   userName,
   userEmail,
+  avatarUrl,
   onLogout,
 }: SketchHeaderProps) {
   const isRunning = status === 'running';
@@ -21,7 +23,7 @@ export default function SketchHeader({
     <header className="sketch-header">
       {/* ── Left Box: Logo ── */}
       <div className="sketch-header__box sketch-header__logo" title="Xphire">
-        <svg width="28" height="28" viewBox="0 0 28 28" fill="none" stroke="#121214" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="32" height="32" viewBox="0 0 28 28" fill="none" stroke="#121214" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
           {/* Hand-drawn X / Lightning bolt logo mark */}
           <path d="M4 4 L14 14 L24 4" />
           <path d="M4 24 L14 14 L24 24" />
@@ -37,7 +39,7 @@ export default function SketchHeader({
         
         {/* Sketchy Light Bulb Icon */}
         <div className={`sketch-bulb ${isRunning ? 'sketch-bulb--running' : 'sketch-bulb--online'}`} title={`System: ${status}`}>
-          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             {/* Bulb Glow Fill */}
             <path
               d="M9 18h6a1 1 0 0 0 1-1v-1a7 7 0 1 0-8 0v1a1 1 0 0 0 1 1z"
@@ -69,7 +71,13 @@ export default function SketchHeader({
         onClick={onLogout}
         title={userName ? `Logged in as ${userName} (${userEmail}) - Click to logout` : 'Guest Agent'}
       >
-        {userName ? (
+        {avatarUrl ? (
+          <img
+            src={avatarUrl}
+            alt={userName || 'Profile avatar'}
+            className="sketch-pfp-img"
+          />
+        ) : userName ? (
           <span className="sketch-pfp-text">
             {userName.slice(0, 2).toUpperCase()}
           </span>
