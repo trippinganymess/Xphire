@@ -7,7 +7,6 @@ export interface SignupData {
   name: string;
   email: string;
   password: string;
-  apiKey: string;
 }
 
 interface SignupCardProps {
@@ -19,7 +18,6 @@ export default function SignupCard({ onSignupSuccess }: SignupCardProps) {
     name: '',
     email: '',
     password: '',
-    apiKey: '',
   });
   const [loading, setLoading] = useState(false);
 
@@ -78,15 +76,6 @@ export default function SignupCard({ onSignupSuccess }: SignupCardProps) {
           required
           minLength={8}
           autoComplete="new-password"
-        />
-        <NeonInput
-          label="API Access Key"
-          type="text"
-          value={form.apiKey}
-          onChange={update('apiKey')}
-          required
-          accentColor="lime"
-          autoComplete="off"
         />
 
         <NeonButton

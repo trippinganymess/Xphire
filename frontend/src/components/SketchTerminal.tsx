@@ -5,7 +5,6 @@ import './SketchTerminal.css';
 export interface UserSession {
   name: string;
   email: string;
-  apiKey: string;
 }
 
 interface TerminalLine {
@@ -21,7 +20,7 @@ interface WorkflowParams {
   minStars: number;
 }
 
-type AuthStep = 'NAME' | 'EMAIL' | 'PASSWORD' | 'API_KEY' | 'DONE';
+type AuthStep = 'NAME' | 'EMAIL' | 'PASSWORD' | 'DONE';
 type WorkflowStep = 'IDLE' | 'JOB_TITLE' | 'RECIPIENT_EMAIL' | 'FRESHERS' | 'MIN_STARS' | 'CONFIRM' | 'RUNNING';
 
 interface SketchTerminalProps {
@@ -42,7 +41,7 @@ export default function SketchTerminal({
   
   // Step state machines
   const [authStep, setAuthStep] = useState<AuthStep>('NAME');
-  const [authDraft, setAuthDraft] = useState({ name: '', email: '', password: '', apiKey: '' });
+  const [authDraft, setAuthDraft] = useState({ name: '', email: '', password: '' });
 
   const [workflowStep, setWorkflowStep] = useState<WorkflowStep>('IDLE');
   const [workflowDraft, setWorkflowDraft] = useState<WorkflowParams>({
@@ -75,7 +74,7 @@ export default function SketchTerminal({
         { id: '2', type: 'header', text: '      XPHIRE AI JOB SCOUT - TERMINAL v2.4       ' },
         { id: '3', type: 'header', text: '==================================================' },
         { id: '4', type: 'system', text: 'System ready. Authentication required to continue.' },
-        { id: '5', type: 'system', text: 'Please sign up with your credentials (step 1 of 4).' },
+        { id: '5', type: 'system', text: 'Please sign up with your credentials (step 1 of 3).' },
         { id: '6', type: 'output', text: ' ' },
       ]);
       setAuthStep('NAME');
@@ -102,8 +101,6 @@ export default function SketchTerminal({
           return 'Enter your email address:';
         case 'PASSWORD':
           return 'Create a password:';
-        case 'API_KEY':
-          return 'Enter API access key:';
         default:
           return 'auth >';
       }
@@ -227,17 +224,9 @@ export default function SketchTerminal({
           setLines((prev) => [...prev, { id: String(Date.now()), type: 'error', text: 'Password must be at least 6 characters. Please re-enter:' }]);
           return;
         }
-        setAuthDraft((d) => ({ ...d, password: trimmed }));
-        setAuthStep('API_KEY');
-        return;
-      }
-
-      if (authStep === 'API_KEY') {
-        const finalKey = trimmed || 'XPHIRE-DEFAULT-KEY';
         const session: UserSession = {
           name: authDraft.name,
           email: authDraft.email,
-          apiKey: finalKey,
         };
         onLogin(session);
         onStatusChange('online');
@@ -338,7 +327,6 @@ export default function SketchTerminal({
           ...prev,
           { id: String(Date.now()), type: 'output', text: `Agent Name: ${user!.name}` },
           { id: String(Date.now() + 1), type: 'output', text: `Agent Email: ${user!.email}` },
-          { id: String(Date.now() + 2), type: 'output', text: `API Key: ${user!.apiKey.slice(0, 4)}...${user!.apiKey.slice(-4)}` },
         ]);
         break;
 
