@@ -343,8 +343,12 @@ export default function SketchTerminal({
             setLines((prev) => [
               ...prev,
               { id: String(Date.now()), type: 'error', text: `Sign up failed: ${error.message}` },
-              { id: String(Date.now() + 1), type: 'system', text: "Type 'menu' to return to menu or choose Sign In if you already registered." },
+              { id: String(Date.now() + 1), type: 'system', text: "Returning to authentication menu. Select [2] if you have an account or wish to sign in." },
+              { id: String(Date.now() + 2), type: 'output', text: '  [1] Sign Up (Create a new account)' },
+              { id: String(Date.now() + 3), type: 'output', text: '  [2] Sign In (Log in with existing credentials)\n' },
             ]);
+            setAuthStep('MODE_SELECT');
+            setAuthDraft({ name: '', email: '', password: '' });
             return;
           }
 
@@ -356,9 +360,14 @@ export default function SketchTerminal({
           } else if (data?.user && !data?.session) {
             setLines((prev) => [
               ...prev,
-              { id: String(Date.now()), type: 'warning', text: '✓ Confirmation email sent! Please check your inbox or sign in if confirmed.' },
-              { id: String(Date.now() + 1), type: 'system', text: "Type 'menu' to return to authentication menu and select Sign In." },
+              { id: String(Date.now()), type: 'warning', text: `✓ Confirmation email sent to ${authDraft.email}!` },
+              { id: String(Date.now() + 1), type: 'system', text: 'Please check your inbox to confirm your email, then select [2] to Sign In.' },
+              { id: String(Date.now() + 2), type: 'output', text: ' ' },
+              { id: String(Date.now() + 3), type: 'output', text: '  [1] Sign Up (Create a new account)' },
+              { id: String(Date.now() + 4), type: 'output', text: '  [2] Sign In (Log in with existing credentials)\n' },
             ]);
+            setAuthStep('MODE_SELECT');
+            setAuthDraft({ name: '', email: '', password: '' });
           }
         })();
         
