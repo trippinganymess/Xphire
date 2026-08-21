@@ -1,0 +1,163 @@
+/* ===================================================================
+   APP SHELL - Nav, Layout, Scanline
+   =================================================================== */
+
+/* ── Nav Bar ── */
+.nav-bar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-lg);
+  padding: var(--space-sm) var(--space-xl);
+  height: 60px;
+  background: rgba(13, 13, 18, 0.8);
+  backdrop-filter: blur(16px) saturate(1.2);
+  -webkit-backdrop-filter: blur(16px) saturate(1.2);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.nav-bar__brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex-shrink: 0;
+}
+
+.nav-bar__logo {
+  flex-shrink: 0;
+}
+
+.nav-bar__title {
+  font-size: 1.25rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.nav-bar__subtitle {
+  font-size: 0.6875rem;
+  color: var(--text-muted);
+  padding: 2px 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-subtle);
+}
+
+/* ── Tabs ── */
+.nav-bar__tabs {
+  display: flex;
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  padding: 3px;
+}
+
+.nav-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 18px;
+  font-family: var(--font-sans);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  border-radius: calc(var(--radius-xl) - 3px);
+  cursor: pointer;
+  transition:
+    color var(--transition-fast),
+    background var(--transition-fast),
+    box-shadow var(--transition-normal);
+}
+
+.nav-tab:hover {
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.nav-tab--active {
+  color: var(--neon-cyan);
+  background: rgba(var(--glow-cyan), 0.08);
+  box-shadow: 0 0 12px rgba(var(--glow-cyan), 0.1);
+}
+
+/* ── Status Indicator ── */
+.nav-bar__status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.nav-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--neon-lime);
+  box-shadow: 0 0 8px rgba(var(--glow-lime), 0.5);
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+/* ── Page Content ── */
+.page-content {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: var(--space-2xl) var(--space-lg);
+  min-height: calc(100vh - 60px);
+}
+
+.page-content__inner {
+  animation: fade-in-up 0.5s var(--ease-out-expo) both;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+/* ── Scanline Overlay ── */
+.scanline {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent 0px,
+    transparent 2px,
+    rgba(0, 0, 0, 0.03) 2px,
+    rgba(0, 0, 0, 0.03) 4px
+  );
+  opacity: 0.4;
+}
+
+/* ── Responsive ── */
+@media (max-width: 640px) {
+  .nav-bar {
+    padding: var(--space-sm) var(--space-md);
+    gap: var(--space-sm);
+  }
+
+  .nav-bar__subtitle {
+    display: none;
+  }
+
+  .nav-tab {
+    padding: 6px 12px;
+    font-size: 0.75rem;
+  }
+
+  .nav-tab svg {
+    display: none;
+  }
+
+  .page-content {
+    padding: var(--space-lg) var(--space-md);
+  }
+}

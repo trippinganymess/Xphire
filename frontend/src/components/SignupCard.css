@@ -1,0 +1,63 @@
+/* ===================================================================
+   SIGNUP CARD - Glassmorphism + Neon
+   =================================================================== */
+
+.signup-card {
+  position: relative;
+  width: 100%;
+  max-width: 440px;
+  padding: var(--space-xl) var(--space-xl) var(--space-lg);
+  background: rgba(21, 21, 30, 0.7);
+  backdrop-filter: blur(24px) saturate(1.4);
+  -webkit-backdrop-filter: blur(24px) saturate(1.4);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  transition: box-shadow var(--transition-slow);
+  animation: fade-in-up 0.6s var(--ease-out-expo) both;
+}
+
+.signup-card:hover {
+  box-shadow: var(--shadow-card-hover);
+}
+
+/* ── Success State ── */
+.signup-card--success {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--space-2xl) var(--space-xl);
+}
+
+.signup-card__icon {
+  margin-bottom: var(--space-lg);
+  animation: float 3s ease-in-out infinite;
+}
+
+/* ── Header ── */
+.signup-card__header {
+  margin-bottom: var(--space-lg);
+}
+
+.signup-card__badge {
+  display: inline-flex;
+  padding: 4px 12px;
+  background: rgba(var(--glow-cyan), 0.06);
+  border: 1px solid rgba(var(--glow-cyan), 0.15);
+  border-radius: var(--radius-full);
+  margin-bottom: var(--space-md);
+}
+
+/* ── Form ── */
+.signup-card__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+/* ── Footer ── */
+.signup-card__footer {
+  text-align: center;
+  margin-top: var(--space-lg);
+}

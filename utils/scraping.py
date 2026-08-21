@@ -60,8 +60,8 @@ def create_stealth_client(proxy: Optional[str] = None) -> httpx.AsyncClient:
     }
 
     pool_limits = httpx.Limits(
-        max_connections=20,
-        max_keepalive_connections=10,
+        max_connections=60,
+        max_keepalive_connections=25,
     )
 
     return httpx.AsyncClient(
@@ -69,7 +69,7 @@ def create_stealth_client(proxy: Optional[str] = None) -> httpx.AsyncClient:
         limits=pool_limits,
         proxy=proxy,
         follow_redirects=True,
-        timeout=httpx.Timeout(15.0, connect=10.0),
+        timeout=httpx.Timeout(12.0, connect=8.0),
     )
 
 

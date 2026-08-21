@@ -1,0 +1,140 @@
+/* ===================================================================
+   NEON INPUT - Outlined M3-style with floating label
+   =================================================================== */
+
+.neon-input {
+  position: relative;
+  width: 100%;
+  margin-bottom: 4px;
+}
+
+.neon-input__field {
+  width: 100%;
+  padding: 16px 16px 8px;
+  font-family: var(--font-sans);
+  font-size: 0.9375rem;
+  color: var(--text-primary);
+  background: var(--surface-input);
+  border: 1.5px solid var(--border-default);
+  border-radius: var(--radius-md);
+  outline: none;
+  transition:
+    border-color var(--transition-fast),
+    box-shadow var(--transition-normal),
+    background var(--transition-fast);
+  caret-color: var(--neon-cyan);
+}
+
+.neon-input__field::placeholder {
+  color: transparent;
+}
+
+/* ── Floating Label ── */
+.neon-input__label {
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.9375rem;
+  font-weight: 400;
+  color: var(--text-muted);
+  pointer-events: none;
+  transition:
+    transform var(--transition-fast),
+    font-size var(--transition-fast),
+    color var(--transition-fast),
+    top var(--transition-fast);
+}
+
+.neon-input--filled .neon-input__label,
+.neon-input--focused .neon-input__label {
+  top: 12px;
+  transform: translateY(0);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* ── Bottom border accent ── */
+.neon-input__border {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: 0;
+  height: 2px;
+  border-radius: 1px;
+  transition: width var(--transition-normal), left var(--transition-normal);
+}
+
+.neon-input--focused .neon-input__border {
+  width: 100%;
+  left: 0;
+}
+
+/* ── Cyan variant ── */
+.neon-input--cyan.neon-input--focused .neon-input__field {
+  border-color: rgba(var(--glow-cyan), 0.5);
+  box-shadow: 0 0 0 3px rgba(var(--glow-cyan), 0.08), 0 0 20px rgba(var(--glow-cyan), 0.06);
+}
+.neon-input--cyan.neon-input--focused .neon-input__label {
+  color: var(--neon-cyan);
+}
+.neon-input--cyan .neon-input__border {
+  background: var(--neon-cyan);
+}
+.neon-input--cyan .neon-input__field {
+  caret-color: var(--neon-cyan);
+}
+
+/* ── Pink variant ── */
+.neon-input--pink.neon-input--focused .neon-input__field {
+  border-color: rgba(var(--glow-pink), 0.5);
+  box-shadow: 0 0 0 3px rgba(var(--glow-pink), 0.08), 0 0 20px rgba(var(--glow-pink), 0.06);
+}
+.neon-input--pink.neon-input--focused .neon-input__label {
+  color: var(--neon-pink);
+}
+.neon-input--pink .neon-input__border {
+  background: var(--neon-pink);
+}
+.neon-input--pink .neon-input__field {
+  caret-color: var(--neon-pink);
+}
+
+/* ── Lime variant ── */
+.neon-input--lime.neon-input--focused .neon-input__field {
+  border-color: rgba(var(--glow-lime), 0.5);
+  box-shadow: 0 0 0 3px rgba(var(--glow-lime), 0.08), 0 0 20px rgba(var(--glow-lime), 0.06);
+}
+.neon-input--lime.neon-input--focused .neon-input__label {
+  color: var(--neon-lime);
+}
+.neon-input--lime .neon-input__border {
+  background: var(--neon-lime);
+}
+.neon-input--lime .neon-input__field {
+  caret-color: var(--neon-lime);
+}
+
+/* ── Hover ── */
+.neon-input:hover:not(.neon-input--focused) .neon-input__field {
+  border-color: rgba(255, 255, 255, 0.18);
+  background: var(--surface-card);
+}
+
+/* ── Error ── */
+.neon-input--error .neon-input__field {
+  border-color: #FF4466 !important;
+  box-shadow: 0 0 0 3px rgba(255, 68, 102, 0.1) !important;
+}
+.neon-input--error .neon-input__label {
+  color: #FF4466 !important;
+}
+.neon-input__error {
+  display: block;
+  margin-top: 6px;
+  font-size: 0.75rem;
+  color: #FF4466;
+  padding-left: 16px;
+}
