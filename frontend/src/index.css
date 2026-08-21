@@ -1,49 +1,38 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=JetBrains+Mono:wght@400;500;600;700&family=Patrick+Hand&display=swap');
 
 /* ===================================================================
-   XPHIRE RETRO NEON DESIGN SYSTEM
-   Cyberpunk / Heatmap aesthetic layered on M3 principles
+   XPHIRE SKETCHY TERMINAL DESIGN SYSTEM
+   Paper white background, hand-drawn black sketchy lines & ink typography
    =================================================================== */
 
 :root {
-  /* ── Surface Tokens ── */
-  --surface-base:       #0D0D12;
-  --surface-elevated:   #121218;
-  --surface-card:       #15151E;
-  --surface-card-hover: #1A1A26;
-  --surface-input:      #11111A;
-  --surface-overlay:    rgba(13, 13, 18, 0.85);
+  /* ── Color Tokens ── */
+  --paper-bg:         #FFFFFF;
+  --paper-surface:    #FAFAFA;
+  --ink-black:        #121214;
+  --ink-charcoal:     #27272A;
+  --ink-muted:        #71717A;
+  --ink-light:        #A1A1AA;
+  --border-sketch:    #121214;
 
-  /* ── Neon Accent Tokens ── */
-  --neon-cyan:    #00F0FF;
-  --neon-pink:    #FF007F;
-  --neon-lime:    #00FF66;
-  --neon-purple:  #A855F7;
-  --neon-amber:   #FFB800;
+  /* ── Indicator Lights ── */
+  --bulb-green:       #00E676;
+  --bulb-green-glow:  rgba(0, 230, 118, 0.6);
+  --bulb-yellow:      #FFD600;
+  --bulb-yellow-glow: rgba(255, 214, 0, 0.7);
 
-  /* ── Neon Glow (rgb channels for alpha composition) ── */
-  --glow-cyan:    0, 240, 255;
-  --glow-pink:    255, 0, 127;
-  --glow-lime:    0, 255, 102;
-  --glow-purple:  168, 85, 247;
+  /* ── Typography ── */
+  --font-hand:        'Patrick Hand', 'Caveat', cursive, sans-serif;
+  --font-cursive:     'Caveat', cursive, sans-serif;
+  --font-mono:        'JetBrains Mono', 'Courier New', monospace;
 
-  /* ── Text Tokens ── */
-  --text-primary:    #F0F0F5;
-  --text-secondary:  #9898A8;
-  --text-muted:      #5A5A6E;
-  --text-on-accent:  #0D0D12;
-
-  /* ── Border / Outline ── */
-  --border-subtle:   rgba(255, 255, 255, 0.06);
-  --border-default:  rgba(255, 255, 255, 0.10);
-  --border-focus:    rgba(0, 240, 255, 0.5);
-
-  /* ── Corner Radii (M3-inspired) ── */
-  --radius-sm:  8px;
-  --radius-md:  12px;
-  --radius-lg:  16px;
-  --radius-xl:  20px;
-  --radius-full: 9999px;
+  /* ── Sketch Borders ── */
+  --sketch-border-sm: 2px solid var(--border-sketch);
+  --sketch-border-md: 2.5px solid var(--border-sketch);
+  --sketch-radius-box: 4px 6px 5px 7px / 7px 5px 6px 4px;
+  --sketch-radius-btn: 6px 4px 7px 5px / 5px 7px 4px 6px;
+  --sketch-shadow:    3px 3px 0px var(--ink-black);
+  --sketch-shadow-lg: 5px 5px 0px var(--ink-black);
 
   /* ── Spacing ── */
   --space-xs:  4px;
@@ -51,39 +40,6 @@
   --space-md:  16px;
   --space-lg:  24px;
   --space-xl:  32px;
-  --space-2xl: 48px;
-
-  /* ── Typography ── */
-  --font-sans:  'Inter', system-ui, -apple-system, sans-serif;
-  --font-mono:  'JetBrains Mono', 'Fira Code', monospace;
-
-  /* ── Transitions ── */
-  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
-  --transition-fast:   150ms var(--ease-out-expo);
-  --transition-normal: 250ms var(--ease-out-expo);
-  --transition-slow:   400ms var(--ease-out-expo);
-
-  /* ── Shadows ── */
-  --shadow-card:
-    0 0 0 1px var(--border-subtle),
-    0 4px 24px rgba(0, 0, 0, 0.4),
-    0 0 60px rgba(var(--glow-cyan), 0.06);
-  --shadow-card-hover:
-    0 0 0 1px rgba(var(--glow-cyan), 0.2),
-    0 8px 40px rgba(0, 0, 0, 0.5),
-    0 0 80px rgba(var(--glow-cyan), 0.12);
-  --shadow-neon-cyan:
-    0 0 10px rgba(var(--glow-cyan), 0.3),
-    0 0 30px rgba(var(--glow-cyan), 0.15),
-    0 0 60px rgba(var(--glow-cyan), 0.08);
-  --shadow-neon-pink:
-    0 0 10px rgba(var(--glow-pink), 0.3),
-    0 0 30px rgba(var(--glow-pink), 0.15),
-    0 0 60px rgba(var(--glow-pink), 0.08);
-  --shadow-neon-lime:
-    0 0 10px rgba(var(--glow-lime), 0.3),
-    0 0 30px rgba(var(--glow-lime), 0.15),
-    0 0 60px rgba(var(--glow-lime), 0.08);
 }
 
 /* ── Reset & Base ── */
@@ -97,149 +53,74 @@ html {
   font-size: 16px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background: var(--paper-bg);
 }
 
 body {
-  font-family: var(--font-sans);
-  background: var(--surface-base);
-  color: var(--text-primary);
-  line-height: 1.6;
+  font-family: var(--font-hand);
+  background: var(--paper-bg);
+  color: var(--ink-black);
   min-height: 100vh;
-  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.5;
+  background-image: 
+    radial-gradient(#E4E4E7 1px, transparent 1px);
+  background-size: 24px 24px;
 }
 
 #root {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-}
-
-/* ── Typography Scale ── */
-.type-display {
-  font-size: 3rem;
-  font-weight: 800;
-  letter-spacing: -0.03em;
-  line-height: 1.1;
-}
-
-.type-headline {
-  font-size: 1.75rem;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  line-height: 1.2;
-}
-
-.type-title {
-  font-size: 1.25rem;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-  line-height: 1.3;
-}
-
-.type-body {
-  font-size: 1rem;
-  font-weight: 400;
-  line-height: 1.6;
-}
-
-.type-label {
-  font-size: 0.875rem;
-  font-weight: 500;
-  letter-spacing: 0.02em;
-  line-height: 1.4;
-}
-
-.type-caption {
-  font-size: 0.75rem;
-  font-weight: 400;
-  letter-spacing: 0.03em;
-  line-height: 1.4;
-  color: var(--text-muted);
-}
-
-.type-mono {
-  font-family: var(--font-mono);
-  font-size: 0.875rem;
-  letter-spacing: 0;
-}
-
-/* ── Neon Text Gradient ── */
-.neon-text {
-  background: linear-gradient(135deg, var(--neon-cyan), var(--neon-pink));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.neon-text-lime {
-  background: linear-gradient(135deg, var(--neon-lime), var(--neon-cyan));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-/* ── Keyframes ── */
-@keyframes pulse-glow {
-  0%, 100% { opacity: 0.6; }
-  50% { opacity: 1; }
-}
-
-@keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-6px); }
-}
-
-@keyframes shimmer {
-  0% { background-position: -200% center; }
-  100% { background-position: 200% center; }
-}
-
-@keyframes border-flow {
-  0% { border-color: rgba(var(--glow-cyan), 0.3); }
-  33% { border-color: rgba(var(--glow-pink), 0.3); }
-  66% { border-color: rgba(var(--glow-lime), 0.3); }
-  100% { border-color: rgba(var(--glow-cyan), 0.3); }
-}
-
-@keyframes fade-in-up {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes scan-line {
-  0% { transform: translateY(-100%); }
-  100% { transform: translateY(100vh); }
-}
-
-/* ── Scrollbar ── */
-::-webkit-scrollbar {
-  width: 6px;
-}
-::-webkit-scrollbar-track {
-  background: var(--surface-base);
-}
-::-webkit-scrollbar-thumb {
-  background: rgba(var(--glow-cyan), 0.2);
-  border-radius: var(--radius-full);
-}
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(var(--glow-cyan), 0.4);
+  padding: 24px 16px;
+  max-width: 900px;
+  margin: 0 auto;
+  width: 100%;
 }
 
 /* ── Selection ── */
 ::selection {
-  background: rgba(var(--glow-cyan), 0.3);
-  color: var(--text-primary);
+  background: #FFE600;
+  color: var(--ink-black);
 }
 
-/* ── Focus Visible ── */
-:focus-visible {
-  outline: 2px solid var(--neon-cyan);
-  outline-offset: 2px;
+/* ── Scrollbars ── */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #F4F4F5;
+  border-left: 1.5px solid var(--border-sketch);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--ink-black);
+  border-radius: 2px;
+}
+
+/* ── Keyframes ── */
+@keyframes cursor-blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+
+@keyframes pulse-bulb-yellow {
+  0%, 100% {
+    filter: drop-shadow(0 0 6px var(--bulb-yellow-glow)) drop-shadow(0 0 14px var(--bulb-yellow));
+    transform: scale(1);
+  }
+  50% {
+    filter: drop-shadow(0 0 12px var(--bulb-yellow-glow)) drop-shadow(0 0 24px var(--bulb-yellow));
+    transform: scale(1.08);
+  }
+}
+
+@keyframes pulse-bulb-green {
+  0%, 100% {
+    filter: drop-shadow(0 0 5px var(--bulb-green-glow)) drop-shadow(0 0 10px var(--bulb-green));
+  }
+  50% {
+    filter: drop-shadow(0 0 10px var(--bulb-green-glow)) drop-shadow(0 0 18px var(--bulb-green));
+  }
 }

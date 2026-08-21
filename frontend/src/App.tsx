@@ -1,74 +1,40 @@
 import { useState } from 'react';
-import HeatmapBg from './components/HeatmapBg';
-import SignupCard, { type SignupData } from './components/SignupCard';
-import WorkflowFilters from './components/WorkflowFilters';
+import SketchHeader, { type SystemStatus } from './components/SketchHeader';
+import SketchTerminal, { type UserSession } from './components/SketchTerminal';
 import './App.css';
 
 export default function App() {
-  const [user, setUser] = useState<SignupData | null>(null);
+  const [user, setUser] = useState<UserSession | null>(null);
+  const [systemStatus, setSystemStatus] = useState<SystemStatus>('online');
 
-  const handleSignupSuccess = (userData: SignupData) => {
-    setUser(userData);
+  const handleLogin = (newUser: UserSession) => {
+    setUser(newUser);
   };
 
   const handleLogout = () => {
     setUser(null);
+    setSystemStatus('online');
   };
 
   return (
-    <>
-      <HeatmapBg />
+    <div className="sketch-app-container">
+      {/* ── Top Header matching the sketch ── */}
+      <SketchHeader
+        status={systemStatus}
+        userName={user?.name}
+        userEmail={user?.email}
+        onLogout={user ? handleLogout : undefined}
+      />
 
-      {/* ── Nav Bar ── */}
-      <nav className="nav-bar">
-        <div className="nav-bar__brand">
-          <svg className="nav-bar__logo" width="32" height="32" viewBox="0 0 32 32" fill="none">
-            <rect width="32" height="32" rx="8" fill="rgba(var(--glow-cyan), 0.08)" stroke="rgba(var(--glow-cyan), 0.3)" strokeWidth="1" />
-            <path d="M8 22l4-14h2l3 8 3-8h2l4 14h-2.5l-2.5-9-3 9h-2l-3-9-2.5 9H8z" fill="var(--neon-cyan)" />
-          </svg>
-          <span className="nav-bar__title neon-text">Xphire</span>
-          <span className="nav-bar__subtitle type-mono">AI Job Scout</span>
-        </div>
-
-        <div className="nav-bar__right">
-          {user ? (
-            <div className="nav-user">
-              <div className="nav-user__info">
-                <span className="nav-user__name">{user.name}</span>
-                <span className="nav-user__email type-mono">{user.email}</span>
-              </div>
-              <button
-                className="nav-user__logout-btn"
-                onClick={handleLogout}
-                title="Sign out"
-              >
-                Sign Out
-              </button>
-            </div>
-          ) : (
-            <div className="nav-bar__status">
-              <span className="nav-status-dot" />
-              <span className="type-caption" style={{ color: 'var(--neon-cyan)' }}>
-                Authentication Required
-              </span>
-            </div>
-          )}
-        </div>
-      </nav>
-
-      {/* ── Page Content ── */}
-      <main className="page-content">
-        <div className="page-content__inner" key={user ? 'authenticated' : 'guest'}>
-          {user ? (
-            <WorkflowFilters userEmail={user.email} />
-          ) : (
-            <SignupCard onSignupSuccess={handleSignupSuccess} />
-          )}
-        </div>
+      {/* ── Main Terminal Body matching the sketch ── */}
+      <main className="sketch-app-main">
+        <SketchTerminal
+          user={user}
+          onLogin={handleLogin}
+          onLogout={handleLogout}
+          onStatusChange={setSystemStatus}
+        />
       </main>
-
-      {/* ── Scanline overlay ── */}
-      <div className="scanline" aria-hidden="true" />
-    </>
+    </div>
   );
 }
