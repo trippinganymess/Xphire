@@ -45,10 +45,11 @@ SCRAPERS        = ["google", "linkedin", "indeed"]
 deduper = Deduper()
 
 # ============================================================================
-# EXPANDED ATS TARGET SLUGS
+# EXPANDED ATS TARGET SLUGS (850+ Tech Companies & Startups)
 # ============================================================================
-# Greenhouse (150+ tech companies & startups hiring in India / globally)
-GREENHOUSE_SLUGS = [
+# Greenhouse (300+ tech companies, unicorns & product startups)
+GREENHOUSE_SLUGS = list(dict.fromkeys([
+    # Top Indian Startups & Tech Unicorns
     "razorpay", "phonepe", "groww", "swiggy", "zepto", "meesho", "postman",
     "curefit", "slice", "cred", "urbancompany", "nykaa", "blinkit",
     "policybazaar", "zomato", "cars24", "inmobi", "commerceiq", "coindcx",
@@ -60,6 +61,9 @@ GREENHOUSE_SLUGS = [
     "fractal", "thoughtspot", "bharatpe", "upstox", "apna", "ola", "oyo",
     "makemytrip", "flipkart", "paytm", "digit", "acko", "khatabook", "udaan",
     "myntra", "pharmeasy", "billdesk", "mindtickle", "locus", "dunzo",
+    "tekion", "vymo", "infracloud", "jupiter", "khatabook", "loco",
+
+    # Global Big Tech, Unicorns & Scaleups Hiring in India / Globally
     "airbnb", "stripe", "figma", "databricks", "coinbase", "okta", "cloudflare",
     "lyft", "discord", "reddit", "upwork", "plaid", "instacart", "rippling",
     "mongodb", "twilio", "github", "doordash", "robinhood", "square", "block",
@@ -77,10 +81,50 @@ GREENHOUSE_SLUGS = [
     "heap", "launchdarkly", "mparticle", "optimizely", "dynatrace", "newrelic",
     "grafana", "honeycomb", "cribl", "chronosphere", "logicmonitor", "bigid",
     "snyk", "wiz", "orca", "lacework", "tanium", "sentinelone", "cybereason",
-]
 
-# Lever (100+ top companies & high-growth scaleups)
-LEVER_SLUGS = [
+    # Infrastructure, DevTools, Cloud & Modern Platforms
+    "canonical", "cockroachlabs", "dbtlabs", "grafanalabs", "kong",
+    "liquibase", "mirantis", "neo4j", "ngrok", "percona", "pingidentity",
+    "puppet", "rancher", "redhat", "scylladb", "sonarsource", "starburst",
+    "timescale", "traefik", "trilogy", "yugabyte", "agora", "algorand",
+    "alchemy", "alluxio", "anyscale", "appliedintuition", "aptos", "arbitrum",
+    "automattic", "avast", "betterment", "blend", "blizzard", "brave",
+    "broadcom", "buildkite", "bungie", "carta", "celestia", "chainlink",
+    "circle", "circleci", "clever", "clickup", "cloudera", "coda",
+    "codecademy", "coreweave", "couchbase", "cruise", "daily", "darktrace",
+    "deepgram", "deliveroo", "deno", "digitalocean", "docker", "duo",
+    "envoy", "epic", "etsy", "eventbrite", "expensify", "fauna", "fetch",
+    "fiverr", "flexport", "fly", "freshworks", "front", "godaddy",
+    "goodrx", "grammarly", "guidewire", "hackerone", "handshake", "headspace",
+    "hightouch", "honey", "hopper", "hyperscience", "illumina", "imperva",
+    "insitro", "instabase", "ironclad", "iterable", "jfrog", "juniper",
+    "justworks", "kaltura", "kayak", "klarna", "kustomer", "leadiq",
+    "lime", "linear", "looker", "mapbox", "marqeta", "mattermost",
+    "medium", "meraki", "mercury", "metabase", "meter", "mindbody",
+    "mixpanel", "moderna", "motive", "moveworks", "mozilla", "nerdwallet",
+    "netapp", "netdata", "nextdoor", "niantic", "nordvpn", "nuro",
+    "okx", "oneplus", "onfido", "opentable", "opendoor", "oracle",
+    "outreach", "palantir", "pantheon", "pave", "paypal", "pendo",
+    "personio", "pitchbook", "planet", "plivo", "pocket", "procore",
+    "proton", "pubmatic", "purestorage", "qualtrics", "quantcast", "quizlet",
+    "rapid7", "retool", "ringcentral", "riotgames", "roku", "rover",
+    "sailpoint", "salesforce", "sap", "scribd", "seatgeek", "sendbird",
+    "servicenow", "shogun", "signal", "sisense", "skydio", "slack",
+    "smartling", "smartsheet", "snapchat", "snaplogic", "solana", "soundhound",
+    "sprout", "squareup", "stackpath", "strava", "sunrun", "supercell",
+    "superhuman", "suse", "synopsys", "tableau", "talend", "talkdesk",
+    "target", "tealium", "teamviewer", "temporal", "teradata", "thumbtack",
+    "tile", "tinder", "tripadvisor", "truework", "twosigma", "uber",
+    "uipath", "unbounce", "unqork", "userzoom", "vanguard", "vanta",
+    "veeam", "venmo", "veracode", "veritas", "viasat", "visa",
+    "vox", "walmart", "warby", "wave", "waze", "whatnot",
+    "wikimedia", "wish", "wix", "wolt", "workato", "workiva",
+    "xero", "yext", "yotpo", "youtube", "zendesk", "zerodha",
+    "zillow", "ziprecruiter", "zoho", "zoom",
+]))
+
+# Lever (250+ top tech companies, fintechs & fast-growing startups)
+LEVER_SLUGS = list(dict.fromkeys([
     "spotify", "palantir", "netflix", "mindtickle", "clear", "remote",
     "loom", "zalando", "thoughtworks", "lever", "yelp", "eventbrite",
     "zapier", "auth0", "contentful", "netlify", "framer", "webflow",
@@ -95,11 +139,82 @@ LEVER_SLUGS = [
     "shippo", "starlingbank", "oaknorth", "n26", "trade-republic",
     "bitpanda", "ledger", "bitstamp", "consensys", "rarible", "dapperlabs",
     "immutable", "animocabrands", "sky-mavis", "sorare", "axon", "formlabs",
-    "whoop", "oura", "levels", "eight-sleep", "tempo", "tonal",
-]
+    "whoop", "oura", "levels", "eight-sleep", "tempo", "tonal", "affinity",
+    "agora", "airbrake", "aircall", "altana", "anchor", "angellist",
+    "apify", "apollo", "appcues", "appsmith", "artlist", "ataccama",
+    "atlas", "audius", "authentik", "avocode", "b12", "backstage",
+    "bain", "bamboohr", "banza", "batch", "beeper", "belvo",
+    "bentoml", "betterment", "bitly", "bitmex", "blackbird", "blockdaemon",
+    "bluevoyant", "bold", "branch", "brandwatch", "bravado", "brave",
+    "browserstack", "bugherd", "bullhorn", "bumble", "butter", "buzzsprout",
+    "camunda", "candid", "capsule", "carbon", "careem", "carto",
+    "casper", "celonis", "check", "chronicle", "clerk", "clever",
+    "clockify", "codeclimate", "cohere", "coinmetro", "composio", "copper",
+    "cord", "craft", "curve", "cyberhaven", "dbt", "delighted",
+    "deputy", "dialpad", "drift", "dronedeploy", "duckduckgo", "eero",
+    "elation", "enode", "envato", "esri", "expedia", "fabric",
+    "fast", "fastly", "fathom", "favro", "feedly", "fellow",
+    "fetch", "fidelity", "filecoin", "fireblocks", "fireship", "flock",
+    "flutter", "formstack", "found", "frameio", "frontapp", "fuse",
+    "gather", "geckoboard", "gem", "getstream", "ghost", "giantswarm",
+    "gitbook", "glitch", "gooddata", "gradle", "greenhouse", "groove",
+    "growthbook", "gruntwork", "hackerrank", "happyfox", "hasura", "hatch",
+    "hearst", "helix", "helium", "hex", "hims", "honeybadger",
+    "hootsuite", "hotjar", "hubstaff", "hyperswitch", "iconik", "idme",
+    "incredibuild", "influxdata", "infura", "inmobi", "insight", "instapage",
+    "intercom", "invisionapp", "ionic", "jotform", "jump", "justeat",
+    "katana", "kayak", "keploy", "kickstarter", "kissflow", "knot",
+    "konghq", "kontent", "kraken", "kustomer", "leadfeeder", "lemlist",
+    "lightspeed", "linktree", "livekit", "livestorm", "logflare", "loop",
+    "lucidchart", "lugg", "luno", "mailerlite", "mailgun", "mambu",
+    "mapillary", "matrix", "matter", "maven", "maxmind", "maze",
+    "medallia", "metabase", "mirakl", "monday", "mongodb", "mparticle",
+    "msg91", "myfitnesspal", "nanit", "narrative", "native", "near",
+    "netdata", "nextflow", "nexthink", "ngrok", "nitro", "novu",
+    "obsidian", "octopus", "olark", "omnisend", "onefootball", "onesignal",
+    "onflow", "onfleet", "online", "openreplay", "openstatus", "optimove",
+    "optimizely", "orbit", "outreach", "overleaf", "paddle", "pager",
+    "particle", "payfit", "paystack", "pencil", "pendo", "perimeter81",
+    "phrase", "pinecone", "pingcap", "pipedrive", "plaid", "plane",
+    "planetscale", "platzi", "podbean", "polymarket", "postman", "powerschool",
+    "prisma", "privy", "productboard", "promethean", "pulse", "pusher",
+    "qatalog", "qlik", "qonto", "qualaroo", "quantexa", "quickbase",
+    "railway", "rainforest", "rapyd", "recurly", "redshift", "reflect",
+    "reforge", "relay", "render", "replit", "responsive", "resy",
+    "retool", "reverb", "revolut", "ribbon", "riskified", "roadie",
+    "robinhood", "rockset", "rollbar", "ronin", "root", "route",
+    "rudderstack", "runway", "safetywing", "salesloft", "samsara", "sanity",
+    "sarvam", "scalable", "scale", "scaleway", "schibsted", "scrimba",
+    "secoda", "secureframe", "segment", "semaphore", "sendinblue", "sensu",
+    "sentry", "shadow", "shift", "shippo", "shiprocket", "shuttle",
+    "signalwire", "signavio", "simpl", "simple", "singlestore", "sketch",
+    "skillshare", "smarkets", "smartly", "smartrecruiters", "snack", "snyk",
+    "socket", "solarwinds", "sonatype", "sonos", "sourcegraph", "spendesk",
+    "split", "spot", "springer", "square", "stackblitz", "stackshare",
+    "staffbase", "starling", "statsig", "status", "steelseries", "step",
+    "stitch", "strapi", "stream", "stripe", "stytch", "supabase",
+    "superblocks", "surge", "survicate", "svix", "swap", "synthesia",
+    "tableau", "tactile", "tailwind", "takeaway", "tala", "talent",
+    "tamara", "target", "taskrabbit", "taxfix", "tealium", "tecton",
+    "telnyx", "tempo", "terraform", "thinkific", "thirdweb", "thoughtspot",
+    "thumbtack", "tidb", "tier", "tines", "tiqets", "toast",
+    "todoist", "toggl", "tomtom", "tophat", "toptal", "tourlane",
+    "traefik", "trainline", "triage", "trivago", "truecaller", "tubi",
+    "turso", "twingate", "typeform", "uber", "ubisoft", "udemy",
+    "uizard", "unbounce", "unleash", "upguard", "upstack", "upstart",
+    "upwork", "userflow", "userpilot", "uxcam", "validere", "vanta",
+    "veeam", "venmo", "verbal", "vespa", "viber", "vidyard",
+    "virtru", "visible", "visma", "vizio", "volt", "vouch",
+    "vungle", "vymo", "vyond", "wave", "waze", "webflow",
+    "weblate", "wheel", "willow", "wing", "wire", "wiremock",
+    "wise", "wish", "wolt", "workhuman", "wpengine", "wrike",
+    "xendit", "xoom", "yandex", "yoast", "yoco", "zapier",
+    "zed", "zendesk", "zenml", "zerodha", "zilch", "zilliz",
+    "zipline", "zomato", "zoopla", "zopa", "zuora",
+]))
 
-# Ashby (110+ modern AI startups, devtools & modern platforms)
-ASHBY_SLUGS = [
+# Ashby (180+ modern AI startups, frontier labs & high-growth tech)
+ASHBY_SLUGS = list(dict.fromkeys([
     "notion", "ramp", "replit", "scale", "linear", "vercel", "perplexity",
     "temporal", "modal", "openai", "cartesia", "parspec", "anthropic",
     "cohere", "huggingface", "midjourney", "stability", "runway", "descript",
@@ -116,11 +231,19 @@ ASHBY_SLUGS = [
     "speakeasy", "outerbounds", "coactive", "decagon", "sierra", "tavily",
     "e2b", "phidata", "mem0", "unstructured", "agentops", "cleanlab",
     "humanloop", "ragas", "truera", "helicone", "lunary", "portkey",
-    "langfuse", "openpipe",
-]
+    "langfuse", "openpipe", "bifrost", "context", "crewai", "dust",
+    "embed", "fixie", "flowise", "glean", "guardrails", "harvey",
+    "helicone", "kapa", "lamini", "lexica", "llamaparse", "memgpt",
+    "modular", "mosaicml", "nebius", "ollama", "omni", "palantir",
+    "phind", "playht", "pydantic", "radon", "reka", "render",
+    "relevance", "sakana", "sematic", "sentry", "shakudo", "superagi",
+    "tavily", "telivy", "tensorlake", "togetherai", "unsloth", "vanna",
+    "vector", "vllm", "voyage", "wandb", "weightsandbiases", "writer",
+    "xai", "you", "zenml", "zerox", "zephyr",
+]))
 
-# SmartRecruiters (60+ enterprise & multinational tech employers)
-SMARTRECRUITERS_SLUGS = [
+# SmartRecruiters (120+ global enterprise & tech employers)
+SMARTRECRUITERS_SLUGS = list(dict.fromkeys([
     "square", "visa", "bosch", "ubisoft", "twitter", "linkedin", "ikea",
     "equinox", "colliers", "biogen", "blueorigin", "smartrecruiters", "sgs",
     "averydennison", "mcdonalds", "loreal", "marcjacobs", "deloitte", "pwc",
@@ -131,7 +254,15 @@ SMARTRECRUITERS_SLUGS = [
     "thomsonreuters", "bloomberg", "factset", "morningstar", "spglobal",
     "moodys", "fitchratings", "blackrock", "vanguard", "statestreet",
     "fidelity", "charlesschwab", "ameritrade", "etrade", "interactivebrokers",
-]
+    "airbus", "amadeus", "atos", "axa", "barclays", "bnp-paribas",
+    "capgemini", "cgi", "danone", "dassault-systemes", "deutsche-bank",
+    "dhl", "ericsson", "esker", "ey", "generali", "hsbc",
+    "ing", "kone", "kpmg", "legrand", "manpowergroup", "michelin",
+    "natixis", "nokia", "orange", "publicis", "renault", "ricoh",
+    "sanofi", "santander", "sap", "societe-generale", "sodexo", "steria",
+    "stmicroelectronics", "telecom", "thales", "total", "valeo", "veolia",
+    "vinci", "vodafone", "volkswagen", "volvo", "worldline", "zurich",
+]))
 
 # ============================================================================
 # FILTERING PATTERNS
@@ -320,7 +451,7 @@ async def scrape_ats(client, search_title: str, freshers_only: bool = False) -> 
         + len(ASHBY_SLUGS) + len(SMARTRECRUITERS_SLUGS)
     )
     print(f"\n[ATS] Scanning {total_endpoints} ATS endpoints for '{search_title}' (Freshers: {freshers_only})...")
-    semaphore = asyncio.Semaphore(25)
+    semaphore = asyncio.Semaphore(40)
 
     tasks = []
     for slug in GREENHOUSE_SLUGS:

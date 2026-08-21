@@ -1,0 +1,16 @@
+/* ===================================================================
+   SKETCH APP CONTAINER
+   =================================================================== */
+
+.sketch-app-container {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.sketch-app-main {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}

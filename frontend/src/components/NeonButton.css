@@ -1,0 +1,143 @@
+/* ===================================================================
+   NEON BUTTON
+   =================================================================== */
+
+.neon-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  border: 1.5px solid transparent;
+  border-radius: var(--radius-xl);
+  font-family: var(--font-sans);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition:
+    background var(--transition-fast),
+    box-shadow var(--transition-normal),
+    border-color var(--transition-fast),
+    transform var(--transition-fast);
+  user-select: none;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+/* Sizes */
+.neon-btn--sm {
+  padding: 8px 18px;
+  font-size: 0.8125rem;
+}
+.neon-btn--md {
+  padding: 12px 28px;
+  font-size: 0.9375rem;
+}
+.neon-btn--lg {
+  padding: 16px 36px;
+  font-size: 1.0625rem;
+}
+
+/* ── Cyan Variant ── */
+.neon-btn--cyan {
+  background: linear-gradient(135deg, rgba(var(--glow-cyan), 0.12), rgba(var(--glow-cyan), 0.04));
+  border-color: rgba(var(--glow-cyan), 0.3);
+  color: var(--neon-cyan);
+}
+.neon-btn--cyan:hover:not(:disabled) {
+  background: linear-gradient(135deg, rgba(var(--glow-cyan), 0.22), rgba(var(--glow-cyan), 0.08));
+  border-color: var(--neon-cyan);
+  box-shadow: var(--shadow-neon-cyan);
+  transform: translateY(-1px);
+}
+.neon-btn--cyan:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 0 8px rgba(var(--glow-cyan), 0.4);
+}
+
+/* ── Pink Variant ── */
+.neon-btn--pink {
+  background: linear-gradient(135deg, rgba(var(--glow-pink), 0.12), rgba(var(--glow-pink), 0.04));
+  border-color: rgba(var(--glow-pink), 0.3);
+  color: var(--neon-pink);
+}
+.neon-btn--pink:hover:not(:disabled) {
+  background: linear-gradient(135deg, rgba(var(--glow-pink), 0.22), rgba(var(--glow-pink), 0.08));
+  border-color: var(--neon-pink);
+  box-shadow: var(--shadow-neon-pink);
+  transform: translateY(-1px);
+}
+.neon-btn--pink:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 0 8px rgba(var(--glow-pink), 0.4);
+}
+
+/* ── Lime Variant ── */
+.neon-btn--lime {
+  background: linear-gradient(135deg, rgba(var(--glow-lime), 0.12), rgba(var(--glow-lime), 0.04));
+  border-color: rgba(var(--glow-lime), 0.3);
+  color: var(--neon-lime);
+}
+.neon-btn--lime:hover:not(:disabled) {
+  background: linear-gradient(135deg, rgba(var(--glow-lime), 0.22), rgba(var(--glow-lime), 0.08));
+  border-color: var(--neon-lime);
+  box-shadow: var(--shadow-neon-lime);
+  transform: translateY(-1px);
+}
+.neon-btn--lime:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 0 8px rgba(var(--glow-lime), 0.4);
+}
+
+/* ── Glowing State ── */
+.neon-btn--glow.neon-btn--cyan {
+  box-shadow: var(--shadow-neon-cyan);
+  animation: btn-pulse-cyan 2s ease-in-out infinite;
+}
+.neon-btn--glow.neon-btn--pink {
+  box-shadow: var(--shadow-neon-pink);
+  animation: btn-pulse-pink 2s ease-in-out infinite;
+}
+.neon-btn--glow.neon-btn--lime {
+  box-shadow: var(--shadow-neon-lime);
+  animation: btn-pulse-lime 2s ease-in-out infinite;
+}
+
+@keyframes btn-pulse-cyan {
+  0%, 100% { box-shadow: 0 0 10px rgba(var(--glow-cyan), 0.2), 0 0 30px rgba(var(--glow-cyan), 0.1); }
+  50% { box-shadow: 0 0 20px rgba(var(--glow-cyan), 0.4), 0 0 60px rgba(var(--glow-cyan), 0.2); }
+}
+@keyframes btn-pulse-pink {
+  0%, 100% { box-shadow: 0 0 10px rgba(var(--glow-pink), 0.2), 0 0 30px rgba(var(--glow-pink), 0.1); }
+  50% { box-shadow: 0 0 20px rgba(var(--glow-pink), 0.4), 0 0 60px rgba(var(--glow-pink), 0.2); }
+}
+@keyframes btn-pulse-lime {
+  0%, 100% { box-shadow: 0 0 10px rgba(var(--glow-lime), 0.2), 0 0 30px rgba(var(--glow-lime), 0.1); }
+  50% { box-shadow: 0 0 20px rgba(var(--glow-lime), 0.4), 0 0 60px rgba(var(--glow-lime), 0.2); }
+}
+
+/* ── Disabled ── */
+.neon-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  transform: none;
+  animation: none;
+}
+
+/* ── Loading Spinner ── */
+.neon-btn--loading .neon-btn__label {
+  opacity: 0.5;
+}
+
+.neon-btn__spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

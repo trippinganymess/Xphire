@@ -1,0 +1,170 @@
+/* ===================================================================
+   SKETCH TERMINAL - Matching the wireframe drawing
+   =================================================================== */
+
+.sketch-terminal {
+  display: flex;
+  flex-direction: column;
+  background: var(--paper-bg);
+  border: var(--sketch-border-md);
+  border-radius: var(--sketch-radius-box);
+  box-shadow: var(--sketch-shadow-lg);
+  min-height: 580px;
+  max-height: 78vh;
+  width: 100%;
+  overflow: hidden;
+  cursor: text;
+  position: relative;
+}
+
+/* ── Top Bar with Hand-Drawn Title ── */
+.sketch-terminal__topbar {
+  padding: 14px 22px;
+  border-bottom: 2px solid var(--border-sketch);
+  background: var(--paper-surface);
+  user-select: none;
+  display: flex;
+  align-items: center;
+}
+
+.sketch-terminal__title {
+  font-family: var(--font-cursive);
+  font-size: 2.2rem;
+  font-weight: 700;
+  color: var(--ink-black);
+  letter-spacing: 0.01em;
+  line-height: 1;
+}
+
+/* ── Terminal Output Body ── */
+.sketch-terminal__body {
+  flex: 1;
+  padding: 22px 26px;
+  background: var(--paper-bg);
+  overflow-y: auto;
+  font-family: var(--font-mono);
+  font-size: 1.0625rem;
+  line-height: 1.7;
+  color: var(--ink-black);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+/* ── Terminal Output Lines ── */
+.terminal-line {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.terminal-line--header {
+  color: var(--ink-black);
+  font-weight: 700;
+}
+
+.terminal-line--system {
+  color: var(--ink-charcoal);
+  font-weight: 600;
+}
+
+.terminal-line--input {
+  color: #0284C7;
+  font-weight: 600;
+}
+
+.terminal-line--output {
+  color: var(--ink-black);
+}
+
+.terminal-line--success {
+  color: #059669;
+  font-weight: 700;
+}
+
+.terminal-line--warning {
+  color: #D97706;
+  font-weight: 600;
+}
+
+.terminal-line--error {
+  color: #DC2626;
+  font-weight: 600;
+}
+
+/* ── Active Prompt Form & Input ── */
+.terminal-prompt {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.terminal-prompt__label {
+  font-family: var(--font-mono);
+  font-size: 1.0625rem;
+  font-weight: 700;
+  color: #0F172A;
+  white-space: nowrap;
+}
+
+.terminal-prompt__input-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  flex: 1;
+  min-width: 140px;
+}
+
+.terminal-prompt__input {
+  width: 100%;
+  font-family: var(--font-mono);
+  font-size: 1.0625rem;
+  font-weight: 600;
+  color: var(--ink-black);
+  background: transparent;
+  border: none;
+  outline: none;
+  padding: 0;
+  margin: 0;
+  caret-color: var(--ink-black);
+}
+
+.terminal-prompt__input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.terminal-cursor {
+  font-family: var(--font-mono);
+  font-size: 1.15rem;
+  color: var(--ink-black);
+  margin-left: 2px;
+  animation: cursor-blink 1s step-start infinite;
+  user-select: none;
+  pointer-events: none;
+}
+
+/* ── Responsive ── */
+@media (max-width: 600px) {
+  .sketch-terminal {
+    min-height: 440px;
+  }
+
+  .sketch-terminal__title {
+    font-size: 1.5rem;
+  }
+
+  .sketch-terminal__body {
+    padding: 12px 14px;
+    font-size: 0.8125rem;
+  }
+
+  .terminal-prompt__label {
+    font-size: 0.8125rem;
+  }
+
+  .terminal-prompt__input {
+    font-size: 0.8125rem;
+  }
+}

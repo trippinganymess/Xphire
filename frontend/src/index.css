@@ -1,0 +1,127 @@
+@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=JetBrains+Mono:wght@400;500;600;700&family=Patrick+Hand&display=swap');
+
+/* ===================================================================
+   XPHIRE SKETCHY TERMINAL DESIGN SYSTEM
+   Paper white background, hand-drawn black sketchy lines & ink typography
+   =================================================================== */
+
+:root {
+  /* ── Color Tokens ── */
+  --paper-bg:         #FFFFFF;
+  --paper-surface:    #FAFAFA;
+  --ink-black:        #121214;
+  --ink-charcoal:     #27272A;
+  --ink-muted:        #71717A;
+  --ink-light:        #A1A1AA;
+  --border-sketch:    #121214;
+
+  /* ── Indicator Lights ── */
+  --bulb-green:       #00E676;
+  --bulb-green-glow:  rgba(0, 230, 118, 0.6);
+  --bulb-yellow:      #FFD600;
+  --bulb-yellow-glow: rgba(255, 214, 0, 0.7);
+
+  /* ── Typography ── */
+  --font-hand:        'Patrick Hand', 'Caveat', cursive, sans-serif;
+  --font-cursive:     'Caveat', cursive, sans-serif;
+  --font-mono:        'JetBrains Mono', 'Courier New', monospace;
+
+  /* ── Sketch Borders ── */
+  --sketch-border-sm: 2px solid var(--border-sketch);
+  --sketch-border-md: 2.5px solid var(--border-sketch);
+  --sketch-radius-box: 4px 6px 5px 7px / 7px 5px 6px 4px;
+  --sketch-radius-btn: 6px 4px 7px 5px / 5px 7px 4px 6px;
+  --sketch-shadow:    3px 3px 0px var(--ink-black);
+  --sketch-shadow-lg: 5px 5px 0px var(--ink-black);
+
+  /* ── Spacing ── */
+  --space-xs:  4px;
+  --space-sm:  8px;
+  --space-md:  16px;
+  --space-lg:  24px;
+  --space-xl:  32px;
+}
+
+/* ── Reset & Base ── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: var(--paper-bg);
+}
+
+body {
+  font-family: var(--font-hand);
+  background: var(--paper-bg);
+  color: var(--ink-black);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.5;
+  background-image: 
+    radial-gradient(#E4E4E7 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+#root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  padding: 32px 16px;
+  width: 75vw;
+  max-width: 1440px;
+  min-width: 320px;
+  margin: 0 auto;
+}
+
+/* ── Selection ── */
+::selection {
+  background: #FFE600;
+  color: var(--ink-black);
+}
+
+/* ── Scrollbars ── */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #F4F4F5;
+  border-left: 1.5px solid var(--border-sketch);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--ink-black);
+  border-radius: 2px;
+}
+
+/* ── Keyframes ── */
+@keyframes cursor-blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+
+@keyframes pulse-bulb-yellow {
+  0%, 100% {
+    filter: drop-shadow(0 0 6px var(--bulb-yellow-glow)) drop-shadow(0 0 14px var(--bulb-yellow));
+    transform: scale(1);
+  }
+  50% {
+    filter: drop-shadow(0 0 12px var(--bulb-yellow-glow)) drop-shadow(0 0 24px var(--bulb-yellow));
+    transform: scale(1.08);
+  }
+}
+
+@keyframes pulse-bulb-green {
+  0%, 100% {
+    filter: drop-shadow(0 0 5px var(--bulb-green-glow)) drop-shadow(0 0 10px var(--bulb-green));
+  }
+  50% {
+    filter: drop-shadow(0 0 10px var(--bulb-green-glow)) drop-shadow(0 0 18px var(--bulb-green));
+  }
+}
