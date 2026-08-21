@@ -9,8 +9,8 @@
   border: var(--sketch-border-md);
   border-radius: var(--sketch-radius-box);
   box-shadow: var(--sketch-shadow-lg);
-  min-height: 520px;
-  max-height: 75vh;
+  min-height: 580px;
+  max-height: 78vh;
   width: 100%;
   overflow: hidden;
   cursor: text;
@@ -19,7 +19,7 @@
 
 /* ── Top Bar with Hand-Drawn Title ── */
 .sketch-terminal__topbar {
-  padding: 12px 18px;
+  padding: 14px 22px;
   border-bottom: 2px solid var(--border-sketch);
   background: var(--paper-surface);
   user-select: none;
@@ -29,7 +29,7 @@
 
 .sketch-terminal__title {
   font-family: var(--font-cursive);
-  font-size: 1.85rem;
+  font-size: 2.2rem;
   font-weight: 700;
   color: var(--ink-black);
   letter-spacing: 0.01em;
@@ -39,16 +39,16 @@
 /* ── Terminal Output Body ── */
 .sketch-terminal__body {
   flex: 1;
-  padding: 18px 20px;
+  padding: 22px 26px;
   background: var(--paper-bg);
   overflow-y: auto;
   font-family: var(--font-mono);
-  font-size: 0.9375rem;
-  line-height: 1.65;
+  font-size: 1.0625rem;
+  line-height: 1.7;
   color: var(--ink-black);
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
 }
 
 /* ── Terminal Output Lines ── */
@@ -96,13 +96,13 @@
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 6px;
+  gap: 10px;
+  margin-top: 8px;
 }
 
 .terminal-prompt__label {
   font-family: var(--font-mono);
-  font-size: 0.9375rem;
+  font-size: 1.0625rem;
   font-weight: 700;
   color: #0F172A;
   white-space: nowrap;
@@ -119,7 +119,7 @@
 .terminal-prompt__input {
   width: 100%;
   font-family: var(--font-mono);
-  font-size: 0.9375rem;
+  font-size: 1.0625rem;
   font-weight: 600;
   color: var(--ink-black);
   background: transparent;
@@ -137,7 +137,7 @@
 
 .terminal-cursor {
   font-family: var(--font-mono);
-  font-size: 1rem;
+  font-size: 1.15rem;
   color: var(--ink-black);
   margin-left: 2px;
   animation: cursor-blink 1s step-start infinite;

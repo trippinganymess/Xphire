@@ -6,19 +6,19 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 14px;
+  padding: 12px 18px;
   background: var(--paper-bg);
   border: var(--sketch-border-md);
   border-radius: var(--sketch-radius-box);
   box-shadow: var(--sketch-shadow);
-  margin-bottom: 24px;
+  margin-bottom: 28px;
   user-select: none;
 }
 
 /* ── Square Corner Boxes (Logo & PFP) ── */
 .sketch-header__box {
-  width: 48px;
-  height: 48px;
+  width: 56px;
+  height: 56px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -55,7 +55,7 @@
 
 .sketch-pfp-text {
   font-family: var(--font-cursive);
-  font-size: 1.6rem;
+  font-size: 1.85rem;
   font-weight: 700;
   color: var(--ink-black);
   line-height: 1;
@@ -67,13 +67,13 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
+  gap: 16px;
   flex: 1;
 }
 
 .sketch-header__title {
   font-family: var(--font-cursive);
-  font-size: 2.1rem;
+  font-size: 2.5rem;
   font-weight: 700;
   color: var(--ink-black);
   letter-spacing: 0.02em;
