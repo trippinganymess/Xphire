@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef, type FormEvent } from 'react';
 import { type SystemStatus } from './SketchHeader';
+import { supabase } from '../lib/supabase';
+import { incrementUserRuns } from '../lib/userService';
 import './SketchTerminal.css';
 
 // Load all user avatars from assets/Users
@@ -46,10 +48,9 @@ interface SketchTerminalProps {
 
 export default function SketchTerminal({
   user,
-  onLogin,
   onLogout,
   onStatusChange,
-}: SketchTerminalProps) {
+}: Omit<SketchTerminalProps, 'onLogin'>) {
   const [lines, setLines] = useState<TerminalLine[]>([]);
   const [inputVal, setInputVal] = useState('');
   
@@ -146,7 +147,7 @@ export default function SketchTerminal({
   };
 
   // Run execution simulation
-  const executeWorkflow = (params: WorkflowParams) => {
+  const executeWorkflow = async (params: WorkflowParams) => {
     setWorkflowStep('RUNNING');
     onStatusChange('running');
 
@@ -156,44 +157,62 @@ export default function SketchTerminal({
       setLines((prev) => [...prev, { ...line, id: String(Date.now() + Math.random()) }]);
     };
 
-    addLine({ type: 'system', text: `\n[${timestamp()}] >> [DISPATCH] Triggering GitHub Actions workflow_dispatch 'email_jobs.yml'...` });
+    addLine({ type: 'system', text: `\n[${timestamp()}] >> [DISPATCH] Triggering GitHub Actions via Edge Function...` });
 
-    setTimeout(() => {
+    try {
+      const { error } = await supabase.functions.invoke('dispatch-workflow', {
+        body: {
+          jobTitle: params.jobTitle,
+          recipientEmail: params.recipientEmail,
+          freshersOnly: params.freshersOnly,
+          minStars: params.minStars
+        }
+      });
+
+      if (error) throw error;
+
+      addLine({ type: 'success', text: `[${timestamp()}] >> [SUCCESS] Workflow dispatched successfully!` });
       addLine({ type: 'output', text: `[${timestamp()}] >> [PARAM] Job Title: "${params.jobTitle}"` });
       addLine({ type: 'output', text: `[${timestamp()}] >> [PARAM] Recipient: ${params.recipientEmail}` });
-      addLine({ type: 'output', text: `[${timestamp()}] >> [PARAM] Freshers Only: ${params.freshersOnly}` });
-      addLine({ type: 'output', text: `[${timestamp()}] >> [PARAM] Min Stars: ${params.minStars}★` });
-    }, 600);
+      
+      // Update user runs in background
+      if (user) {
+        // Find user ID from session to increment runs
+        supabase.auth.getSession().then(({ data: { session } }) => {
+          if (session?.user) {
+            incrementUserRuns(session.user.id);
+          }
+        });
+      }
 
-    setTimeout(() => {
-      addLine({ type: 'system', text: `[${timestamp()}] >> [CACHE] Checking Supabase Seen_job cache (< 6h old)...` });
-    }, 1300);
+      // We still simulate the streaming logs for the UI experience, 
+      // but the actual run is happening on GitHub Actions.
+      setTimeout(() => {
+        addLine({ type: 'system', text: `[${timestamp()}] >> [CACHE] Checking Supabase Seen_job cache (< 6h old)...` });
+      }, 1500);
 
-    setTimeout(() => {
-      addLine({ type: 'output', text: `[${timestamp()}] >> [ATS_SCAN] Scanning 850+ ATS endpoints (Greenhouse, Lever, Ashby, SmartRecruiters)...` });
-    }, 2200);
+      setTimeout(() => {
+        addLine({ type: 'output', text: `[${timestamp()}] >> [ATS_SCAN] Scanning 850+ ATS endpoints...` });
+      }, 3000);
 
-    setTimeout(() => {
-      addLine({ type: 'output', text: `[${timestamp()}] >> [JOBSPY] Aggregating Google Jobs, LinkedIn & Indeed postings...` });
-    }, 3100);
+      setTimeout(() => {
+        addLine({ type: 'system', text: `[${timestamp()}] >> Note: Actual execution takes 2-5 minutes. You will receive an email at ${params.recipientEmail} when complete.` });
+      }, 4500);
 
-    setTimeout(() => {
-      addLine({ type: 'system', text: `[${timestamp()}] >> [AI_REVIEW] Gemini AI evaluating relevance & company ratings...` });
-    }, 4000);
+      setTimeout(() => {
+        addLine({ type: 'success', text: `✓ Job Scout pipeline is running in the background.` });
+        addLine({ type: 'system', text: `\nType 'run' to start another search, or 'help' for options.` });
+        addLine({ type: 'output', text: ' ' });
 
-    setTimeout(() => {
-      addLine({ type: 'output', text: `[${timestamp()}] >> [EMAIL] Compiling HTML digest email with custom rating badges...` });
-    }, 4900);
+        setWorkflowStep('IDLE');
+        onStatusChange('completed'); // or online
+      }, 6000);
 
-    setTimeout(() => {
-      addLine({ type: 'success', text: `[${timestamp()}] >> [SENT] SMTPSecure delivery complete -> Sent to ${params.recipientEmail}!` });
-      addLine({ type: 'success', text: `✓ Workflow completed successfully (Run ID: #${Math.floor(100000000 + Math.random() * 900000000)}).` });
-      addLine({ type: 'system', text: `\nType 'run' to start another search, or 'help' for options.` });
-      addLine({ type: 'output', text: ' ' });
-
+    } catch (err: any) {
+      addLine({ type: 'error', text: `[${timestamp()}] >> [ERROR] Failed to dispatch workflow: ${err.message}` });
       setWorkflowStep('IDLE');
-      onStatusChange('completed');
-    }, 5800);
+      onStatusChange('online');
+    }
   };
 
   const handleCommandSubmit = (e: FormEvent) => {
@@ -244,13 +263,57 @@ export default function SketchTerminal({
           setLines((prev) => [...prev, { id: String(Date.now()), type: 'error', text: 'Password must be at least 6 characters. Please re-enter:' }]);
           return;
         }
-        const session: UserSession = {
-          name: authDraft.name,
-          email: authDraft.email,
-          avatarUrl: getRandomAvatar(),
-        };
-        onLogin(session);
-        onStatusChange('online');
+        
+        setLines((prev) => [...prev, { id: String(Date.now()), type: 'system', text: 'Authenticating...' }]);
+        
+        const avatarUrl = getRandomAvatar();
+        
+        // Use an async IIFE to handle the Supabase call
+        (async () => {
+          const { error } = await supabase.auth.signUp({
+            email: authDraft.email,
+            password: trimmed,
+            options: {
+              data: {
+                name: authDraft.name,
+                avatar_url: avatarUrl
+              }
+            }
+          });
+
+          if (error) {
+            // Check if user already exists
+            if (error.message.includes('already registered') || error.message.includes('User already exists')) {
+              setLines((prev) => [...prev, 
+                { id: String(Date.now()), type: 'system', text: 'User already exists. Attempting login...' }
+              ]);
+              
+              const { error: signInError } = await supabase.auth.signInWithPassword({
+                email: authDraft.email,
+                password: trimmed,
+              });
+              
+              if (signInError) {
+                setLines((prev) => [...prev, 
+                  { id: String(Date.now()), type: 'error', text: `Login failed: ${signInError.message}. Restarting auth.` },
+                  { id: String(Date.now() + 1), type: 'system', text: 'Enter your full name:' }
+                ]);
+                setAuthStep('NAME');
+                setAuthDraft({ name: '', email: '', password: '' });
+                return;
+              }
+              
+              // We'll let App.tsx handle the onLogin when the auth state change fires
+              return;
+            }
+            
+            setLines((prev) => [...prev, { id: String(Date.now()), type: 'error', text: `Auth failed: ${error.message}. Try again:` }]);
+            return;
+          }
+
+          // We'll let App.tsx handle the onLogin when the auth state change fires
+        })();
+        
         return;
       }
     }
@@ -358,7 +421,10 @@ export default function SketchTerminal({
           ...prev,
           { id: String(Date.now()), type: 'system', text: 'Signing out...' },
         ]);
-        onLogout();
+        (async () => {
+          await supabase.auth.signOut();
+          onLogout();
+        })();
         break;
 
       case 'help':
