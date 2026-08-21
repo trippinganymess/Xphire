@@ -41,6 +41,7 @@ type AuthStep =
   | 'SIGNUP_NAME'
   | 'SIGNUP_EMAIL'
   | 'SIGNUP_PASSWORD'
+  | 'SIGNUP_CONFIRM_PASSWORD'
   | 'SIGNIN_EMAIL'
   | 'SIGNIN_PASSWORD'
   | 'DONE';
@@ -63,7 +64,7 @@ export default function SketchTerminal({
   
   // Step state machines
   const [authStep, setAuthStep] = useState<AuthStep>('MODE_SELECT');
-  const [authDraft, setAuthDraft] = useState({ name: '', email: '', password: '' });
+  const [authDraft, setAuthDraft] = useState({ name: '', email: '', password: '', confirmPassword: '' });
 
   const [workflowStep, setWorkflowStep] = useState<WorkflowStep>('IDLE');
   const [workflowDraft, setWorkflowDraft] = useState<WorkflowParams>({
@@ -102,7 +103,7 @@ export default function SketchTerminal({
         { id: '8', type: 'output', text: ' ' },
       ]);
       setAuthStep('MODE_SELECT');
-      setAuthDraft({ name: '', email: '', password: '' });
+      setAuthDraft({ name: '', email: '', password: '', confirmPassword: '' });
     } else {
       setLines([
         { id: '1', type: 'header', text: '==================================================' },
@@ -134,6 +135,8 @@ export default function SketchTerminal({
           return 'Enter your email address:';
         case 'SIGNUP_PASSWORD':
           return 'Create a password:';
+        case 'SIGNUP_CONFIRM_PASSWORD':
+          return 'Confirm your password:';
         case 'SIGNIN_EMAIL':
           return 'Enter your email address:';
         case 'SIGNIN_PASSWORD':
@@ -239,7 +242,11 @@ export default function SketchTerminal({
     const currentPrompt = getPromptLabel();
 
     // Log the user's input line
-    const isPasswordPrompt = !user && (authStep === 'SIGNUP_PASSWORD' || authStep === 'SIGNIN_PASSWORD');
+    const isPasswordPrompt = !user && (
+      authStep === 'SIGNUP_PASSWORD' ||
+      authStep === 'SIGNUP_CONFIRM_PASSWORD' ||
+      authStep === 'SIGNIN_PASSWORD'
+    );
     const userLineText = isPasswordPrompt ? '********' : trimmed;
     setLines((prev) => [
       ...prev,
@@ -253,7 +260,7 @@ export default function SketchTerminal({
 
     // Global navigation during authentication
     if (!user && (trimmed.toLowerCase() === 'menu' || trimmed.toLowerCase() === 'back' || trimmed.toLowerCase() === 'restart')) {
-      setAuthDraft({ name: '', email: '', password: '' });
+      setAuthDraft({ name: '', email: '', password: '', confirmPassword: '' });
       setAuthStep('MODE_SELECT');
       setLines((prev) => [
         ...prev,
@@ -272,15 +279,15 @@ export default function SketchTerminal({
       if (authStep === 'MODE_SELECT') {
         const choice = trimmed.toLowerCase();
         if (choice === '1' || choice === 'signup' || choice === 'sign up' || choice === 'register') {
-          setAuthDraft({ name: '', email: '', password: '' });
+          setAuthDraft({ name: '', email: '', password: '', confirmPassword: '' });
           setAuthStep('SIGNUP_NAME');
           setLines((prev) => [
             ...prev,
-            { id: String(Date.now()), type: 'system', text: '--- Sign Up (Step 1 of 3) ---' },
+            { id: String(Date.now()), type: 'system', text: '--- Sign Up (Step 1 of 4) ---' },
           ]);
           return;
         } else if (choice === '2' || choice === 'signin' || choice === 'sign in' || choice === 'login') {
-          setAuthDraft({ name: '', email: '', password: '' });
+          setAuthDraft({ name: '', email: '', password: '', confirmPassword: '' });
           setAuthStep('SIGNIN_EMAIL');
           setLines((prev) => [
             ...prev,
@@ -322,15 +329,34 @@ export default function SketchTerminal({
           setLines((prev) => [...prev, { id: String(Date.now()), type: 'error', text: 'Password must be at least 6 characters. Please re-enter:' }]);
           return;
         }
+        setAuthDraft((d) => ({ ...d, password: trimmed }));
+        setAuthStep('SIGNUP_CONFIRM_PASSWORD');
+        return;
+      }
+
+      if (authStep === 'SIGNUP_CONFIRM_PASSWORD') {
+        if (trimmed.toLowerCase() === 'retry') {
+          setAuthStep('SIGNUP_PASSWORD');
+          setLines((prev) => [...prev, { id: String(Date.now()), type: 'system', text: 'Please enter a new password:' }]);
+          return;
+        }
+
+        if (trimmed !== authDraft.password) {
+          setLines((prev) => [
+            ...prev,
+            { id: String(Date.now()), type: 'error', text: 'Passwords do not match. Please re-enter matching password (or type "retry" to start password over):' },
+          ]);
+          return;
+        }
         
-        setLines((prev) => [...prev, { id: String(Date.now()), type: 'system', text: 'Creating account...' }]);
+        setLines((prev) => [...prev, { id: String(Date.now()), type: 'system', text: 'Passwords matched. Creating account...' }]);
         
         const avatarUrl = getRandomAvatar();
         
         (async () => {
           const { data, error } = await supabase.auth.signUp({
             email: authDraft.email,
-            password: trimmed,
+            password: authDraft.password,
             options: {
               data: {
                 name: authDraft.name,
@@ -348,7 +374,7 @@ export default function SketchTerminal({
               { id: String(Date.now() + 3), type: 'output', text: '  [2] Sign In (Log in with existing credentials)\n' },
             ]);
             setAuthStep('MODE_SELECT');
-            setAuthDraft({ name: '', email: '', password: '' });
+            setAuthDraft({ name: '', email: '', password: '', confirmPassword: '' });
             return;
           }
 
@@ -367,7 +393,7 @@ export default function SketchTerminal({
               { id: String(Date.now() + 4), type: 'output', text: '  [2] Sign In (Log in with existing credentials)\n' },
             ]);
             setAuthStep('MODE_SELECT');
-            setAuthDraft({ name: '', email: '', password: '' });
+            setAuthDraft({ name: '', email: '', password: '', confirmPassword: '' });
           }
         })();
         
@@ -400,10 +426,20 @@ export default function SketchTerminal({
           });
 
           if (error) {
+            const isEmailNotConfirmed = error.message.toLowerCase().includes('email not confirmed');
             setLines((prev) => [
               ...prev,
               { id: String(Date.now()), type: 'error', text: `Login failed: ${error.message}` },
-              { id: String(Date.now() + 1), type: 'system', text: "Please re-enter password, or type 'menu' to choose another option:" },
+              ...(isEmailNotConfirmed
+                ? [
+                    {
+                      id: String(Date.now() + 1),
+                      type: 'system' as const,
+                      text: 'Tip: You can confirm your user directly in Supabase Dashboard (Authentication > Users > ... > Confirm user) or disable "Confirm email" under Authentication > Providers > Email.',
+                    },
+                  ]
+                : []),
+              { id: String(Date.now() + 2), type: 'system' as const, text: "Please re-enter password, or type 'menu' to choose another option:" },
             ]);
             return;
           }
@@ -573,7 +609,7 @@ export default function SketchTerminal({
           <div className="terminal-prompt__input-wrapper">
             <input
               ref={inputRef}
-              type={!user && (authStep === 'SIGNUP_PASSWORD' || authStep === 'SIGNIN_PASSWORD') ? 'password' : 'text'}
+              type={!user && (authStep === 'SIGNUP_PASSWORD' || authStep === 'SIGNUP_CONFIRM_PASSWORD' || authStep === 'SIGNIN_PASSWORD') ? 'password' : 'text'}
               className="terminal-prompt__input"
               value={inputVal}
               onChange={(e) => setInputVal(e.target.value)}
