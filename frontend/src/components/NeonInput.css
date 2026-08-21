@@ -10,7 +10,7 @@
 
 .neon-input__field {
   width: 100%;
-  padding: 16px 16px 8px;
+  padding: 24px 16px 8px;
   font-family: var(--font-sans);
   font-size: 0.9375rem;
   color: var(--text-primary);
@@ -48,11 +48,11 @@
 
 .neon-input--filled .neon-input__label,
 .neon-input--focused .neon-input__label {
-  top: 12px;
+  top: 6px;
   transform: translateY(0);
-  font-size: 0.6875rem;
-  font-weight: 500;
-  letter-spacing: 0.04em;
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
 }
 

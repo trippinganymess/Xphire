@@ -3,21 +3,24 @@ import NeonButton from './NeonButton';
 import NeonInput from './NeonInput';
 import './SignupCard.css';
 
-interface SignupData {
+export interface SignupData {
   name: string;
   email: string;
   password: string;
   apiKey: string;
 }
 
-export default function SignupCard() {
+interface SignupCardProps {
+  onSignupSuccess: (data: SignupData) => void;
+}
+
+export default function SignupCard({ onSignupSuccess }: SignupCardProps) {
   const [form, setForm] = useState<SignupData>({
     name: '',
     email: '',
     password: '',
     apiKey: '',
   });
-  const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const update = (field: keyof SignupData) => (e: React.ChangeEvent<HTMLInputElement>) =>
@@ -27,38 +30,13 @@ export default function SignupCard() {
     e.preventDefault();
     setLoading(true);
 
-    // Mock submission
+    // Mock submission then transition to workflow
     setTimeout(() => {
-      console.log('[Xphire] Signup payload:', form);
+      console.log('[Xphire] User registered:', form);
       setLoading(false);
-      setSubmitted(true);
-    }, 1800);
+      onSignupSuccess(form);
+    }, 1000);
   };
-
-  if (submitted) {
-    return (
-      <div className="signup-card signup-card--success">
-        <div className="signup-card__icon">
-          <svg width="56" height="56" viewBox="0 0 56 56" fill="none">
-            <circle cx="28" cy="28" r="27" stroke="var(--neon-lime)" strokeWidth="2" opacity="0.4" />
-            <circle cx="28" cy="28" r="20" fill="rgba(0, 255, 102, 0.08)" />
-            <path d="M18 28l7 7 13-14" stroke="var(--neon-lime)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </div>
-        <h2 className="type-headline neon-text-lime">Welcome to Xphire</h2>
-        <p className="type-body" style={{ color: 'var(--text-secondary)', marginTop: '8px' }}>
-          Your account has been created. You can now run workflow scans.
-        </p>
-        <NeonButton
-          variant="lime"
-          onClick={() => { setSubmitted(false); setForm({ name: '', email: '', password: '', apiKey: '' }); }}
-          style={{ marginTop: '24px' }}
-        >
-          Back to Signup
-        </NeonButton>
-      </div>
-    );
-  }
 
   return (
     <div className="signup-card">

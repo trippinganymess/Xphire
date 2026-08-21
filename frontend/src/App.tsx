@@ -1,13 +1,19 @@
 import { useState } from 'react';
 import HeatmapBg from './components/HeatmapBg';
-import SignupCard from './components/SignupCard';
+import SignupCard, { type SignupData } from './components/SignupCard';
 import WorkflowFilters from './components/WorkflowFilters';
 import './App.css';
 
-type Page = 'signup' | 'workflow';
-
 export default function App() {
-  const [page, setPage] = useState<Page>('workflow');
+  const [user, setUser] = useState<SignupData | null>(null);
+
+  const handleSignupSuccess = (userData: SignupData) => {
+    setUser(userData);
+  };
+
+  const handleLogout = () => {
+    setUser(null);
+  };
 
   return (
     <>
@@ -24,42 +30,40 @@ export default function App() {
           <span className="nav-bar__subtitle type-mono">AI Job Scout</span>
         </div>
 
-        <div className="nav-bar__tabs">
-          <button
-            className={`nav-tab ${page === 'signup' ? 'nav-tab--active' : ''}`}
-            onClick={() => setPage('signup')}
-          >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <circle cx="8" cy="5" r="3" stroke="currentColor" strokeWidth="1.5" />
-              <path d="M3 14c0-2.76 2.24-5 5-5s5 2.24 5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-            </svg>
-            Signup
-          </button>
-          <button
-            className={`nav-tab ${page === 'workflow' ? 'nav-tab--active' : ''}`}
-            onClick={() => setPage('workflow')}
-          >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <rect x="2" y="2" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.5" />
-              <rect x="9" y="2" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.5" />
-              <rect x="2" y="9" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.5" />
-              <rect x="9" y="9" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.5" />
-            </svg>
-            Workflow
-          </button>
-        </div>
-
-        <div className="nav-bar__status">
-          <span className="nav-status-dot" />
-          <span className="type-caption" style={{ color: 'var(--neon-lime)' }}>Online</span>
+        <div className="nav-bar__right">
+          {user ? (
+            <div className="nav-user">
+              <div className="nav-user__info">
+                <span className="nav-user__name">{user.name}</span>
+                <span className="nav-user__email type-mono">{user.email}</span>
+              </div>
+              <button
+                className="nav-user__logout-btn"
+                onClick={handleLogout}
+                title="Sign out"
+              >
+                Sign Out
+              </button>
+            </div>
+          ) : (
+            <div className="nav-bar__status">
+              <span className="nav-status-dot" />
+              <span className="type-caption" style={{ color: 'var(--neon-cyan)' }}>
+                Authentication Required
+              </span>
+            </div>
+          )}
         </div>
       </nav>
 
       {/* ── Page Content ── */}
       <main className="page-content">
-        <div className="page-content__inner" key={page}>
-          {page === 'signup' && <SignupCard />}
-          {page === 'workflow' && <WorkflowFilters />}
+        <div className="page-content__inner" key={user ? 'authenticated' : 'guest'}>
+          {user ? (
+            <WorkflowFilters userEmail={user.email} />
+          ) : (
+            <SignupCard onSignupSuccess={handleSignupSuccess} />
+          )}
         </div>
       </main>
 

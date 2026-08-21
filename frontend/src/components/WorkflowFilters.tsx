@@ -17,10 +17,14 @@ interface MockResult {
   timestamp: string;
 }
 
-export default function WorkflowFilters() {
+interface WorkflowFiltersProps {
+  userEmail?: string;
+}
+
+export default function WorkflowFilters({ userEmail = '' }: WorkflowFiltersProps) {
   const [form, setForm] = useState<WorkflowInputs>({
     jobTitle: '',
-    recipientEmail: '',
+    recipientEmail: userEmail,
     freshersOnly: false,
     minStars: 3,
   });
