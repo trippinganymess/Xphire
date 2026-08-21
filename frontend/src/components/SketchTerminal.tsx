@@ -426,20 +426,10 @@ export default function SketchTerminal({
           });
 
           if (error) {
-            const isEmailNotConfirmed = error.message.toLowerCase().includes('email not confirmed');
             setLines((prev) => [
               ...prev,
               { id: String(Date.now()), type: 'error', text: `Login failed: ${error.message}` },
-              ...(isEmailNotConfirmed
-                ? [
-                    {
-                      id: String(Date.now() + 1),
-                      type: 'system' as const,
-                      text: 'Tip: You can confirm your user directly in Supabase Dashboard (Authentication > Users > ... > Confirm user) or disable "Confirm email" under Authentication > Providers > Email.',
-                    },
-                  ]
-                : []),
-              { id: String(Date.now() + 2), type: 'system' as const, text: "Please re-enter password, or type 'menu' to choose another option:" },
+              { id: String(Date.now() + 1), type: 'system', text: "Please re-enter password, or type 'menu' to choose another option:" },
             ]);
             return;
           }
