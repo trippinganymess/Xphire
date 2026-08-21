@@ -36,7 +36,14 @@ interface WorkflowParams {
   minStars: number;
 }
 
-type AuthStep = 'NAME' | 'EMAIL' | 'PASSWORD' | 'DONE';
+type AuthStep =
+  | 'MODE_SELECT'
+  | 'SIGNUP_NAME'
+  | 'SIGNUP_EMAIL'
+  | 'SIGNUP_PASSWORD'
+  | 'SIGNIN_EMAIL'
+  | 'SIGNIN_PASSWORD'
+  | 'DONE';
 type WorkflowStep = 'IDLE' | 'JOB_TITLE' | 'RECIPIENT_EMAIL' | 'FRESHERS' | 'MIN_STARS' | 'CONFIRM' | 'RUNNING';
 
 interface SketchTerminalProps {
@@ -55,7 +62,7 @@ export default function SketchTerminal({
   const [inputVal, setInputVal] = useState('');
   
   // Step state machines
-  const [authStep, setAuthStep] = useState<AuthStep>('NAME');
+  const [authStep, setAuthStep] = useState<AuthStep>('MODE_SELECT');
   const [authDraft, setAuthDraft] = useState({ name: '', email: '', password: '' });
 
   const [workflowStep, setWorkflowStep] = useState<WorkflowStep>('IDLE');
@@ -89,10 +96,13 @@ export default function SketchTerminal({
         { id: '2', type: 'header', text: '      XPHIRE AI JOB SCOUT - TERMINAL v2.4       ' },
         { id: '3', type: 'header', text: '==================================================' },
         { id: '4', type: 'system', text: 'System ready. Authentication required to continue.' },
-        { id: '5', type: 'system', text: 'Please sign up with your credentials (step 1 of 3).' },
-        { id: '6', type: 'output', text: ' ' },
+        { id: '5', type: 'system', text: 'Please select an option to proceed:' },
+        { id: '6', type: 'output', text: '  [1] Sign Up (Create a new account)' },
+        { id: '7', type: 'output', text: '  [2] Sign In (Log in with existing credentials)' },
+        { id: '8', type: 'output', text: ' ' },
       ]);
-      setAuthStep('NAME');
+      setAuthStep('MODE_SELECT');
+      setAuthDraft({ name: '', email: '', password: '' });
     } else {
       setLines([
         { id: '1', type: 'header', text: '==================================================' },
@@ -116,12 +126,18 @@ export default function SketchTerminal({
   const getPromptLabel = (): string => {
     if (!user) {
       switch (authStep) {
-        case 'NAME':
+        case 'MODE_SELECT':
+          return 'Select option [1=Sign Up, 2=Sign In]:';
+        case 'SIGNUP_NAME':
           return 'Enter your full name:';
-        case 'EMAIL':
+        case 'SIGNUP_EMAIL':
           return 'Enter your email address:';
-        case 'PASSWORD':
+        case 'SIGNUP_PASSWORD':
           return 'Create a password:';
+        case 'SIGNIN_EMAIL':
+          return 'Enter your email address:';
+        case 'SIGNIN_PASSWORD':
+          return 'Enter your password:';
         default:
           return 'auth >';
       }
@@ -223,7 +239,8 @@ export default function SketchTerminal({
     const currentPrompt = getPromptLabel();
 
     // Log the user's input line
-    const userLineText = authStep === 'PASSWORD' && !user ? '********' : trimmed;
+    const isPasswordPrompt = !user && (authStep === 'SIGNUP_PASSWORD' || authStep === 'SIGNIN_PASSWORD');
+    const userLineText = isPasswordPrompt ? '********' : trimmed;
     setLines((prev) => [
       ...prev,
       {
@@ -234,86 +251,160 @@ export default function SketchTerminal({
     ]);
     setInputVal('');
 
+    // Global navigation during authentication
+    if (!user && (trimmed.toLowerCase() === 'menu' || trimmed.toLowerCase() === 'back' || trimmed.toLowerCase() === 'restart')) {
+      setAuthDraft({ name: '', email: '', password: '' });
+      setAuthStep('MODE_SELECT');
+      setLines((prev) => [
+        ...prev,
+        { id: String(Date.now()), type: 'system', text: '\nReturned to authentication menu:' },
+        { id: String(Date.now() + 1), type: 'output', text: '  [1] Sign Up (Create a new account)' },
+        { id: String(Date.now() + 2), type: 'output', text: '  [2] Sign In (Log in with existing credentials)\n' },
+      ]);
+      return;
+    }
+
     // ──────────────────────────────────────────
-    // AUTHENTICATION FLOW (One-by-one inputs)
+    // AUTHENTICATION FLOW (Mode Select, Sign Up, Sign In)
     // ──────────────────────────────────────────
     if (!user) {
-      if (authStep === 'NAME') {
+      // Step 0: Choose Sign Up vs Sign In
+      if (authStep === 'MODE_SELECT') {
+        const choice = trimmed.toLowerCase();
+        if (choice === '1' || choice === 'signup' || choice === 'sign up' || choice === 'register') {
+          setAuthDraft({ name: '', email: '', password: '' });
+          setAuthStep('SIGNUP_NAME');
+          setLines((prev) => [
+            ...prev,
+            { id: String(Date.now()), type: 'system', text: '--- Sign Up (Step 1 of 3) ---' },
+          ]);
+          return;
+        } else if (choice === '2' || choice === 'signin' || choice === 'sign in' || choice === 'login') {
+          setAuthDraft({ name: '', email: '', password: '' });
+          setAuthStep('SIGNIN_EMAIL');
+          setLines((prev) => [
+            ...prev,
+            { id: String(Date.now()), type: 'system', text: '--- Sign In (Step 1 of 2) ---' },
+          ]);
+          return;
+        } else {
+          setLines((prev) => [
+            ...prev,
+            { id: String(Date.now()), type: 'error', text: "Invalid choice. Please enter '1' for Sign Up or '2' for Sign In." },
+          ]);
+          return;
+        }
+      }
+
+      // --- SIGN UP FLOW ---
+      if (authStep === 'SIGNUP_NAME') {
         if (!trimmed) {
           setLines((prev) => [...prev, { id: String(Date.now()), type: 'error', text: 'Name cannot be empty. Please enter your name:' }]);
           return;
         }
         setAuthDraft((d) => ({ ...d, name: trimmed }));
-        setAuthStep('EMAIL');
+        setAuthStep('SIGNUP_EMAIL');
         return;
       }
 
-      if (authStep === 'EMAIL') {
+      if (authStep === 'SIGNUP_EMAIL') {
         if (!trimmed || !trimmed.includes('@')) {
           setLines((prev) => [...prev, { id: String(Date.now()), type: 'error', text: 'Please enter a valid email address (e.g. user@example.com):' }]);
           return;
         }
         setAuthDraft((d) => ({ ...d, email: trimmed }));
-        setAuthStep('PASSWORD');
+        setAuthStep('SIGNUP_PASSWORD');
         return;
       }
 
-      if (authStep === 'PASSWORD') {
+      if (authStep === 'SIGNUP_PASSWORD') {
         if (trimmed.length < 6) {
           setLines((prev) => [...prev, { id: String(Date.now()), type: 'error', text: 'Password must be at least 6 characters. Please re-enter:' }]);
           return;
         }
         
-        setLines((prev) => [...prev, { id: String(Date.now()), type: 'system', text: 'Authenticating...' }]);
+        setLines((prev) => [...prev, { id: String(Date.now()), type: 'system', text: 'Creating account...' }]);
         
         const avatarUrl = getRandomAvatar();
         
-        // Use an async IIFE to handle the Supabase call
         (async () => {
-          const { error } = await supabase.auth.signUp({
+          const { data, error } = await supabase.auth.signUp({
             email: authDraft.email,
             password: trimmed,
             options: {
               data: {
                 name: authDraft.name,
-                avatar_url: avatarUrl
-              }
-            }
+                avatar_url: avatarUrl,
+              },
+            },
           });
 
           if (error) {
-            // Check if user already exists
-            if (error.message.includes('already registered') || error.message.includes('User already exists')) {
-              setLines((prev) => [...prev, 
-                { id: String(Date.now()), type: 'system', text: 'User already exists. Attempting login...' }
-              ]);
-              
-              const { error: signInError } = await supabase.auth.signInWithPassword({
-                email: authDraft.email,
-                password: trimmed,
-              });
-              
-              if (signInError) {
-                setLines((prev) => [...prev, 
-                  { id: String(Date.now()), type: 'error', text: `Login failed: ${signInError.message}. Restarting auth.` },
-                  { id: String(Date.now() + 1), type: 'system', text: 'Enter your full name:' }
-                ]);
-                setAuthStep('NAME');
-                setAuthDraft({ name: '', email: '', password: '' });
-                return;
-              }
-              
-              // We'll let App.tsx handle the onLogin when the auth state change fires
-              return;
-            }
-            
-            setLines((prev) => [...prev, { id: String(Date.now()), type: 'error', text: `Auth failed: ${error.message}. Try again:` }]);
+            setLines((prev) => [
+              ...prev,
+              { id: String(Date.now()), type: 'error', text: `Sign up failed: ${error.message}` },
+              { id: String(Date.now() + 1), type: 'system', text: "Type 'menu' to return to menu or choose Sign In if you already registered." },
+            ]);
             return;
           }
 
-          // We'll let App.tsx handle the onLogin when the auth state change fires
+          if (data?.session) {
+            setLines((prev) => [
+              ...prev,
+              { id: String(Date.now()), type: 'success', text: '✓ Account created successfully! Logging you in...' },
+            ]);
+          } else if (data?.user && !data?.session) {
+            setLines((prev) => [
+              ...prev,
+              { id: String(Date.now()), type: 'warning', text: '✓ Confirmation email sent! Please check your inbox or sign in if confirmed.' },
+              { id: String(Date.now() + 1), type: 'system', text: "Type 'menu' to return to authentication menu and select Sign In." },
+            ]);
+          }
         })();
         
+        return;
+      }
+
+      // --- SIGN IN FLOW ---
+      if (authStep === 'SIGNIN_EMAIL') {
+        if (!trimmed || !trimmed.includes('@')) {
+          setLines((prev) => [...prev, { id: String(Date.now()), type: 'error', text: 'Please enter a valid email address (e.g. user@example.com):' }]);
+          return;
+        }
+        setAuthDraft((d) => ({ ...d, email: trimmed }));
+        setAuthStep('SIGNIN_PASSWORD');
+        return;
+      }
+
+      if (authStep === 'SIGNIN_PASSWORD') {
+        if (!trimmed) {
+          setLines((prev) => [...prev, { id: String(Date.now()), type: 'error', text: 'Password cannot be empty. Please enter your password:' }]);
+          return;
+        }
+
+        setLines((prev) => [...prev, { id: String(Date.now()), type: 'system', text: 'Authenticating credentials...' }]);
+
+        (async () => {
+          const { error } = await supabase.auth.signInWithPassword({
+            email: authDraft.email,
+            password: trimmed,
+          });
+
+          if (error) {
+            setLines((prev) => [
+              ...prev,
+              { id: String(Date.now()), type: 'error', text: `Login failed: ${error.message}` },
+              { id: String(Date.now() + 1), type: 'system', text: "Please re-enter password, or type 'menu' to choose another option:" },
+            ]);
+            return;
+          }
+
+          setLines((prev) => [
+            ...prev,
+            { id: String(Date.now()), type: 'success', text: '✓ Credentials verified! Logging you in...' },
+          ]);
+        })();
+
         return;
       }
     }
@@ -473,7 +564,7 @@ export default function SketchTerminal({
           <div className="terminal-prompt__input-wrapper">
             <input
               ref={inputRef}
-              type={!user && authStep === 'PASSWORD' ? 'password' : 'text'}
+              type={!user && (authStep === 'SIGNUP_PASSWORD' || authStep === 'SIGNIN_PASSWORD') ? 'password' : 'text'}
               className="terminal-prompt__input"
               value={inputVal}
               onChange={(e) => setInputVal(e.target.value)}
