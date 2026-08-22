@@ -14,6 +14,24 @@ serve(async (req) => {
   try {
     const { jobTitle, recipientEmail, freshersOnly, minStars } = await req.json();
 
+    // Input Validation
+    if (typeof jobTitle !== 'string' || jobTitle.trim().length === 0 || jobTitle.length > 100) {
+      throw new Error('Invalid jobTitle: must be a non-empty string under 100 characters');
+    }
+    
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (typeof recipientEmail !== 'string' || !emailRegex.test(recipientEmail) || recipientEmail.length > 255) {
+      throw new Error('Invalid recipientEmail: must be a valid email address under 255 characters');
+    }
+    
+    if (typeof freshersOnly !== 'boolean') {
+      throw new Error('Invalid freshersOnly: must be a boolean');
+    }
+    
+    if (typeof minStars !== 'number' || minStars < 1 || minStars > 5) {
+      throw new Error('Invalid minStars: must be a number between 1 and 5');
+    }
+
     const githubToken = Deno.env.get('GITHUB_PAT')?.trim();
     const owner = Deno.env.get('GITHUB_OWNER')?.trim() || 'trippinganymess';
     const repo = Deno.env.get('GITHUB_REPO')?.trim() || 'Xphire';
