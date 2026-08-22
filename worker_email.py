@@ -477,6 +477,7 @@ async def check_db_cache(
     title: str,
     freshers_only: bool = False,
     min_stars: int = 1,
+    limit: int = 60,
 ) -> list:
     if not deduper.supabase_url or not deduper.supabase_key:
         return []
@@ -490,7 +491,7 @@ async def check_db_cache(
         f"{rating_filter}"
         f"&scraped_at=gte.{_hours_ago_iso(CACHE_HOURS)}"
         f"&order=rating.desc"
-        f"&limit=50"
+        f"&limit={limit}"
     )
     try:
         resp = await client.get(url, headers=deduper.read_headers, timeout=10.0)
@@ -499,12 +500,12 @@ async def check_db_cache(
             if freshers_only and rows:
                 rows = [r for r in rows if is_fresher_job(r)]
             if rows:
-                print(f"[CACHE] HIT - {len(rows)} cached jobs for '{title}' (≥{min_stars}★, < {CACHE_HOURS}h old)")
+                print(f"[CACHE] {len(rows)} cached jobs found for '{title}' (≥{min_stars}★, < {CACHE_HOURS}h old)")
                 return rows
     except Exception as exc:
         print(f"[CACHE] Query failed: {exc}")
 
-    print(f"[CACHE] MISS - no fresh cached results for '{title}'. Running scrapers...")
+    print(f"[CACHE] No cached results for '{title}'.")
     return []
 
 
@@ -594,75 +595,74 @@ async def main():
 
     proxy_list = parse_proxy_list()
 
+    # MAX backfill candidates to pull from cache (3× the email quota)
+    MAX_CACHE_BACKFILL = MAX_EMAIL_JOBS * 3
+
     async with create_stealth_client() as client:
-        # -- Step 1: Check database cache --------------------------------
-        jobs = await check_db_cache(
+        # -- Step 1 & 2: Parallel — cache lookup + live scrapers ----------
+        print("\n[PIPELINE] Running cache lookup and live scrapers in parallel...")
+        cache_task = check_db_cache(
             client,
             job_title,
             freshers_only=freshers_only,
             min_stars=min_stars,
+            limit=MAX_CACHE_BACKFILL,
+        )
+        scrape_task = asyncio.gather(
+            scrape_jobspy(job_title, proxy_list, freshers_only=freshers_only),
+            scrape_ats(client, job_title, freshers_only=freshers_only),
+        )
+        cache_jobs, (jobspy_results, ats_results) = await asyncio.gather(cache_task, scrape_task)
+
+        # -- Step 3: Dedup new scraped jobs against DB, enrich & save -----
+        all_scraped = jobspy_results + ats_results
+        new_jobs: List[Dict[str, Any]] = []
+
+        if all_scraped:
+            print(f"\n[PIPELINE] Combined {len(jobspy_results)} JobSpy + {len(ats_results)} ATS = {len(all_scraped)} total scraped")
+            unseen = await deduper.get_unseen_jobs(client, all_scraped)
+            if unseen:
+                # -- Step 4: AI Reviewer & Enrichment ---------------------
+                unseen = await enrich_jobs(unseen)
+                await deduper.save_seen_jobs(client, unseen)
+                new_jobs = unseen
+            else:
+                print("[PIPELINE] All scraped jobs already in DB. Using cache backfill only.")
+        else:
+            print("[PIPELINE] No jobs returned from live scrapers. Using cache backfill only.")
+
+        # -- Step 5: Hybrid merge — fresh scraped first, cache fills rest --
+        seen_urls = {j.get("url", "") for j in new_jobs if j.get("url")}
+        cache_backfill = [j for j in cache_jobs if j.get("url", "") not in seen_urls]
+
+        # Sort each pool by rating descending
+        new_jobs_sorted    = sorted(new_jobs,       key=lambda j: int(j.get("rating", 3) or 3), reverse=True)
+        cache_backfill_sorted = sorted(cache_backfill, key=lambda j: int(j.get("rating", 3) or 3), reverse=True)
+
+        jobs = new_jobs_sorted + cache_backfill_sorted
+        print(
+            f"\n[PIPELINE] Hybrid pool: {len(new_jobs_sorted)} fresh + "
+            f"{len(cache_backfill_sorted)} cache backfill = {len(jobs)} total"
         )
 
-        if not jobs:
-            # -- Step 2a: Scrape via JobSpy -----------------------------
-            jobspy_results = await scrape_jobspy(
-                job_title,
-                proxy_list,
-                freshers_only=freshers_only,
-            )
-
-            # -- Step 2b: Scrape via ATS APIs ---------------------------
-            ats_results = await scrape_ats(
-                client,
-                job_title,
-                freshers_only=freshers_only,
-            )
-
-            # -- Step 3: Combine all sources ----------------------------
-            all_scraped = jobspy_results + ats_results
-
-            if not all_scraped:
-                print("[PIPELINE] No jobs found after scraping. Aborting.")
-                return
-
-            print(f"\n[PIPELINE] Combined {len(jobspy_results)} JobSpy + {len(ats_results)} ATS = {len(all_scraped)} total jobs")
-
-            # -- Step 4: Dedup against Supabase -------------------------
-            new_jobs = await deduper.get_unseen_jobs(client, all_scraped)
-
-            if new_jobs:
-                # -- Step 5: AI Reviewer & Enrichment -------------------
-                new_jobs = await enrich_jobs(new_jobs)
-                await deduper.save_seen_jobs(client, new_jobs)
-                jobs = new_jobs
-            else:
-                print("[PIPELINE] All scraped jobs already in DB. Fetching best from cache...")
-                cached = await check_db_cache(
-                    client,
-                    job_title,
-                    freshers_only=freshers_only,
-                    min_stars=min_stars,
-                )
-                jobs = cached or all_scraped
-
-        # -- Step 6: Post-enrichment filtering (Freshers & Min Stars) ---
+        # -- Step 6: Post-enrichment filtering (Freshers & Min Stars) -----
         if freshers_only:
-            before_fresher = len(jobs)
+            before = len(jobs)
             jobs = [j for j in jobs if is_fresher_job(j)]
-            print(f"[FILTER] Freshers filter: {before_fresher} -> {len(jobs)} jobs")
+            print(f"[FILTER] Freshers filter: {before} -> {len(jobs)} jobs")
 
         if min_stars > 1:
-            before_stars = len(jobs)
-            jobs = [j for j in jobs if int(j.get("rating", 3)) >= min_stars]
-            print(f"[FILTER] Rating >= {min_stars}★ filter: {before_stars} -> {len(jobs)} jobs")
+            before = len(jobs)
+            jobs = [j for j in jobs if int(j.get("rating", 3) or 3) >= min_stars]
+            print(f"[FILTER] Rating >= {min_stars}★ filter: {before} -> {len(jobs)} jobs")
 
     if not jobs:
-        print("[PIPELINE] No jobs matched all criteria (Freshers/Min Stars). Nothing to email.")
+        print("[PIPELINE] No jobs found from any source. Nothing to email.")
         return
 
-    # -- Step 7: Build and send email -----------------------------------
+    # -- Step 7: Build and send email ------------------------------------
     top_jobs = jobs[:MAX_EMAIL_JOBS]
-    print(f"\n[EMAIL] Building digest for {len(top_jobs)} jobs...")
+    print(f"\n[EMAIL] Building digest for {len(top_jobs)} jobs (quota: {MAX_EMAIL_JOBS})...")
 
     html = build_html_email(
         top_jobs,
