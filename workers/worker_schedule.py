@@ -62,7 +62,10 @@ async def fetch_subscriptions(utc_hour: int) -> List[Dict[str, Any]]:
 async def run_pipeline_for_subscription(sub: Dict[str, Any]) -> None:
     """Set env vars from subscription and run the email pipeline."""
     # Import here so env vars are read fresh per subscription
-    from worker_email import main as email_main
+    try:
+        from workers.worker_email import main as email_main
+    except ImportError:
+        from worker_email import main as email_main
 
     os.environ["JOB_TITLE"]       = sub["job_title"]
     os.environ["RECIPIENT_EMAIL"] = sub["recipient_email"]

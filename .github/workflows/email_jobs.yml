@@ -61,4 +61,4 @@ jobs:
           SMTP_USER: ${{ secrets.SMTP_USER }}
           SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
           PROXY_URL: ${{ secrets.PROXY_URL }}
-        run: python worker_email.py
+        run: python -m workers.worker_email
