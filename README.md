@@ -36,8 +36,3 @@
 | `whoami` | Display active authenticated user profile |
 | `clear` | Clear the terminal window |
 | `help` | Show available commands |
-
----
-
-## 📄 License
-MIT © [trippinganymess](https://github.com/trippinganymess)
