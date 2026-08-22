@@ -5,3 +5,4 @@ __pycache__/
 *.pyc
 frontend/node_modules/
 frontend/dist/
+review.md
