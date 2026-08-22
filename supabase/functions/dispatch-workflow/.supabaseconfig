@@ -1,0 +1,2 @@
+[dispatch-workflow]
+verify_jwt = false

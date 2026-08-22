@@ -1,0 +1,6 @@
+name = "xphire"
+compatibility_date = "2024-09-23"
+
+[assets]
+directory = "./frontend/dist"
+not_found_handling = "single-page-application"
