@@ -188,7 +188,20 @@ export default function SketchTerminal({
         }
       });
 
-      if (error) throw error;
+      if (error) {
+        // FunctionsHttpError wraps the real response in error.context
+        // We need to read the body to get the actual error message
+        let detail = error.message;
+        try {
+          const ctx = (error as any).context;
+          const body = typeof ctx?.json === 'function' ? await ctx.json() : null;
+          detail = body?.error || body?.message || error.message;
+        } catch (_) {}
+        addLine({ type: 'error', text: `[${timestamp()}] >> [ERROR] Failed to dispatch workflow: ${detail}` });
+        setWorkflowStep('IDLE');
+        onStatusChange('online');
+        return;
+      }
 
       addLine({ type: 'success', text: `[${timestamp()}] >> [SUCCESS] Workflow dispatched successfully!` });
       addLine({ type: 'output', text: `[${timestamp()}] >> [PARAM] Job Title: "${params.jobTitle}"` });

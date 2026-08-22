@@ -82,10 +82,10 @@
 }
 
 .sketch-header__title {
-  font-family: var(--font-cursive);
+  font-family: 'Bitcount Single', system-ui;
   font-size: 2.5rem;
-  font-weight: 700;
-  color: var(--ink-black);
+  font-weight: 400;
+  color: #000000;
   letter-spacing: 0.02em;
   transform: rotate(-0.5deg);
 }

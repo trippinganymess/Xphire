@@ -28,10 +28,10 @@
 }
 
 .sketch-terminal__title {
-  font-family: var(--font-cursive);
+  font-family: 'Bitcount Single', system-ui;
   font-size: 2.2rem;
-  font-weight: 700;
-  color: var(--ink-black);
+  font-weight: 400;
+  color: #000000;
   letter-spacing: 0.01em;
   line-height: 1;
 }
@@ -40,7 +40,7 @@
 .sketch-terminal__body {
   flex: 1;
   padding: 22px 26px;
-  background: var(--paper-bg);
+  background: #D4AC0D;
   overflow-y: auto;
   font-family: var(--font-mono);
   font-size: 1.0625rem;
