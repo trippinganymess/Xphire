@@ -14,13 +14,13 @@ serve(async (req) => {
   try {
     const { jobTitle, recipientEmail, freshersOnly, minStars } = await req.json();
 
-    const githubToken = Deno.env.get('GITHUB_PAT');
-    const owner = Deno.env.get('GITHUB_OWNER') || 'trippinganymess';
-    const repo = Deno.env.get('GITHUB_REPO') || 'Xphire';
+    const githubToken = Deno.env.get('GITHUB_PAT')?.trim();
+    const owner = Deno.env.get('GITHUB_OWNER')?.trim() || 'trippinganymess';
+    const repo = Deno.env.get('GITHUB_REPO')?.trim() || 'Xphire';
     const workflowId = 'email_jobs.yml';
 
     if (!githubToken) {
-      throw new Error('GITHUB_PAT is not set');
+      throw new Error('GITHUB_PAT secret is not set in Supabase');
     }
 
     const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/actions/workflows/${workflowId}/dispatches`, {
@@ -28,6 +28,7 @@ serve(async (req) => {
       headers: {
         'Accept': 'application/vnd.github.v3+json',
         'Authorization': `Bearer ${githubToken}`,
+        'User-Agent': 'Xphire-Job-Scout',
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -44,7 +45,7 @@ serve(async (req) => {
     if (!res.ok) {
       const errorText = await res.text();
       console.error('GitHub API error:', res.status, errorText);
-      throw new Error(`GitHub API returned ${res.status}`);
+      throw new Error(`GitHub API error (${res.status}): ${errorText}`);
     }
 
     return new Response(JSON.stringify({ success: true }), {
