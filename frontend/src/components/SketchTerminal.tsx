@@ -113,7 +113,7 @@ export default function SketchTerminal({
         { id: '2', type: 'header', text: '      XPHIRE AI JOB SCOUT - TERMINAL v2.4       ' },
         { id: '3', type: 'header', text: '==================================================' },
         { id: '4', type: 'success', text: `✓ Authentication complete. Welcome, ${user.name}!` },
-        { id: '5', type: 'system', text: 'Configure your Job Scout search parameters below (step 1 of 4):' },
+        { id: '5', type: 'system', text: "Type 'run' to execute the application, or 'help' for more options." },
         { id: '6', type: 'output', text: ' ' },
       ]);
       setWorkflowDraft({
@@ -121,8 +121,9 @@ export default function SketchTerminal({
         recipientEmail: user.email,
         freshersOnly: false,
         minStars: 3,
+        preferredUtcHour: 0,
       });
-      setWorkflowStep('JOB_TITLE');
+      setWorkflowStep('IDLE');
     }
   }, [user]);
 
