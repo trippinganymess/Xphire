@@ -82,10 +82,13 @@
 .sketch-header__terminal-btn {
   text-decoration: none;
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: 18px;
   font-weight: 800;
   color: var(--ink-black);
-  padding: 0 16px;
+  padding: 12px 32px;
+  width: auto;
+  height: auto;
+  white-space: nowrap;
   cursor: pointer;
   transition: transform 0.1s ease, box-shadow 0.1s ease;
 }

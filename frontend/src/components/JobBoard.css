@@ -89,7 +89,8 @@
 
 /* ── Individual Job Card ── */
 .job-card {
-  background: var(--paper-surface);
+  background: var(--terminal-bg, #1e1b12);
+  color: var(--terminal-fg, #f5e0a0);
   border: var(--sketch-border-md);
   border-radius: var(--sketch-radius-box);
   box-shadow: var(--sketch-shadow);
@@ -117,7 +118,7 @@
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--ink-black);
+  color: var(--terminal-fg, #f5e0a0);
 }
 
 .job-card-rating {
@@ -131,7 +132,7 @@
   font-family: var(--font-mono);
   font-size: 18px;
   font-weight: 700;
-  color: var(--ink-black);
+  color: var(--terminal-fg, #f5e0a0);
   line-height: 1.3;
 }
 
@@ -150,7 +151,7 @@
   border-radius: 16px;
   background: var(--paper-bg);
   border: var(--sketch-border-sm);
-  color: var(--ink-black);
+  color: var(--terminal-fg, #f5e0a0);
   white-space: nowrap;
 }
 
@@ -175,7 +176,7 @@
   justify-content: space-between;
   font-family: var(--font-mono);
   font-size: 11px;
-  color: var(--ink-muted);
+  color: var(--terminal-fg, #f5e0a0);
 }
 
 .job-card-source {
@@ -189,13 +190,13 @@
   font-family: var(--font-mono);
   font-size: 14px;
   font-weight: 800;
-  color: #000;
+  color: var(--terminal-fg, #f5e0a0);
   border: var(--sketch-border-md);
   border-radius: var(--sketch-radius-box);
   box-shadow: var(--sketch-shadow);
   padding: 10px 0;
   text-decoration: none;
-  background: var(--paper-bg);
+  background: var(--terminal-bg, #2b2314);
   transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
   cursor: pointer;
 }

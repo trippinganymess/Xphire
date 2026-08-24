@@ -23,7 +23,6 @@ interface Filters {
 }
 
 const RATING_OPTIONS = ['All', '5', '4', '3', '2', '1'];
-const SOURCE_OPTIONS = ['All', 'LinkedIn', 'Naukri', 'Indeed', 'Glassdoor', 'ATS'];
 
 function formatTimeAgo(dateStr: string): string {
   const now = Date.now();
@@ -50,13 +49,13 @@ export default function JobBoard() {
 
   const fetchJobs = async () => {
     setLoading(true);
-    // Calculate a cutoff time: only show jobs scraped in the last 6 hours
-    const sixHoursAgo = new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString();
+    // Calculate a cutoff time: only show jobs scraped in the last 24 hours
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
     let query = supabase
       .from('Seen_job')
       .select('*')
-      .gte('scraped_at', sixHoursAgo)
+      .gte('scraped_at', twentyFourHoursAgo)
       .order('scraped_at', { ascending: false })
       .limit(100);
 
@@ -105,7 +104,7 @@ export default function JobBoard() {
       if (!exp.includes('fresher') && !exp.includes('0-1')) return false;
     }
 
-    // source filter
+    // source filter (still respected if source state is manipulated externally)
     if (filters.source && filters.source !== 'All') {
       if (job.source?.toLowerCase() !== filters.source.toLowerCase()) return false;
     }
@@ -144,18 +143,6 @@ export default function JobBoard() {
           />
           Freshers Only
         </label>
-
-        <select
-          className="job-board-filter-select"
-          value={filters.source}
-          onChange={(e) => setFilters((f) => ({ ...f, source: e.target.value }))}
-        >
-          {SOURCE_OPTIONS.map((opt) => (
-            <option key={opt} value={opt}>
-              {opt === 'All' ? 'All Sources' : opt}
-            </option>
-          ))}
-        </select>
       </div>
     );
   }
