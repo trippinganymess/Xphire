@@ -7,7 +7,7 @@ import { supabase } from './lib/supabase';
 import { fetchUserProfile } from './lib/userService';
 import './App.css';
 
-// A wrapper component to pass the current route down to the header
+// A wrapper component that passes the current route down to the header
 function AppLayout() {
   const [user, setUser] = useState<UserSession | null>(null);
   const [systemStatus, setSystemStatus] = useState<SystemStatus>('online');

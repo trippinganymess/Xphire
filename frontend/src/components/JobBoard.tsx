@@ -6,210 +6,214 @@ interface Job {
   job_id: string;
   company: string;
   title: string;
-  url: string;
   location: string;
   experience: string;
   salary: string;
   source: string;
   rating: number;
   scraped_at: string;
+  url: string;
+}
+
+interface Filters {
+  keyword: string;
+  minRating: string;
+  freshersOnly: boolean;
+  source: string;
+}
+
+const RATING_OPTIONS = ['All', '5', '4', '3', '2', '1'];
+const SOURCE_OPTIONS = ['All', 'LinkedIn', 'Naukri', 'Indeed', 'Glassdoor', 'ATS'];
+
+function formatTimeAgo(dateStr: string): string {
+  const now = Date.now();
+  const then = new Date(dateStr).getTime();
+  const diffMs = now - then;
+  const diffMin = Math.floor(diffMs / 60000);
+  if (diffMin < 1) return 'just now';
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffHr = Math.floor(diffMin / 60);
+  if (diffHr < 24) return `${diffHr}h ago`;
+  const diffDay = Math.floor(diffHr / 24);
+  return `${diffDay}d ago`;
 }
 
 export default function JobBoard() {
   const [jobs, setJobs] = useState<Job[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [filters, setFilters] = useState<Filters>({
+    keyword: '',
+    minRating: 'All',
+    freshersOnly: false,
+    source: 'All',
+  });
+  const [loading, setLoading] = useState(false);
 
-  // Filters
-  const [searchTerm, setSearchTerm] = useState('');
-  const [minRating, setMinRating] = useState<number>(1);
-  const [freshersOnly, setFreshersOnly] = useState(false);
-  const [sourceFilter, setSourceFilter] = useState('All');
+  const fetchJobs = async () => {
+    setLoading(true);
+    // Calculate a cutoff time: only show jobs scraped in the last 6 hours
+    const sixHoursAgo = new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString();
+
+    let query = supabase
+      .from('Seen_job')
+      .select('*')
+      .gte('scraped_at', sixHoursAgo)
+      .order('scraped_at', { ascending: false })
+      .limit(100);
+
+    // Apply filters client‑side because Supabase‑js does not support all filter types natively
+    // The full result set will be filtered after fetching.
+    // We could push down some filters (e.g., source) to the server, but for simplicity we
+    // keep it uniform and filter in JS.
+    const { data, error } = await query;
+    setLoading(false);
+
+    if (error) {
+      console.error('Error fetching jobs:', error);
+      return;
+    }
+
+    setJobs(data as Job[]);
+  };
 
   useEffect(() => {
     fetchJobs();
-    
-    // Auto refresh every 60 seconds
-    const interval = setInterval(() => {
-      fetchJobs();
-    }, 60000);
-    
+    const interval = setInterval(fetchJobs, 60_000); // auto‑refresh every 60s
     return () => clearInterval(interval);
   }, []);
 
-  const fetchJobs = async () => {
-    try {
-      // Fetch jobs from the last 6 hours
-      const sixHoursAgo = new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString();
-      
-      const { data, error } = await supabase
-        .from('Seen_job')
-        .select('*')
-        .gte('scraped_at', sixHoursAgo)
-        .order('scraped_at', { ascending: false })
-        .limit(200);
+  // Apply client‑side filters
+  const filteredJobs = jobs.filter((job) => {
+    // keyword search (case‑insensitive match against company, title, location)
+    if (filters.keyword.trim()) {
+      const kw = filters.keyword.toLowerCase();
+      const matchCompany = job.company?.toLowerCase().includes(kw);
+      const matchTitle = job.title?.toLowerCase().includes(kw);
+      const matchLocation = job.location?.toLowerCase().includes(kw);
+      if (!matchCompany && !matchTitle && !matchLocation) return false;
+    }
 
-      if (error) {
-        console.error('Error fetching jobs:', error);
-        return;
-      }
-      
-      if (data) {
-        setJobs(data as Job[]);
-      }
-    } catch (err) {
-      console.error('Failed to fetch jobs:', err);
-    } finally {
-      setLoading(false);
+    // rating filter
+    if (filters.minRating && filters.minRating !== 'All') {
+      const min = parseInt(filters.minRating, 10);
+      if (isNaN(min)) return true;
+      if ((job.rating ?? 0) < min) return false;
     }
-  };
 
-  const getTimeAgo = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    
-    const diffMins = Math.floor(diffMs / 60000);
-    if (diffMins < 60) return `${diffMins} min ago`;
-    
-    const diffHours = Math.floor(diffMins / 60);
-    if (diffHours < 24) return `${diffHours}h ago`;
-    
-    return `${Math.floor(diffHours / 24)}d ago`;
-  };
+    // freshers‑only toggle (logic: experience string contains "Fresher" or "0-1")
+    if (filters.freshersOnly) {
+      const exp = job.experience?.toLowerCase() || '';
+      if (!exp.includes('fresher') && !exp.includes('0-1')) return false;
+    }
 
-  const getRatingBadge = (rating: number) => {
-    const stars = "★".repeat(rating) + "☆".repeat(5 - rating);
-    const colors: Record<number, string> = {
-      1: "#DC2626", 2: "#EA580C", 3: "#D97706", 4: "#16A34A", 5: "#059669"
-    };
-    return (
-      <span className="job-card__rating" style={{ color: colors[rating] || "#D97706" }}>
-        {stars} ({rating}/5)
-      </span>
-    );
-  };
+    // source filter
+    if (filters.source && filters.source !== 'All') {
+      if (job.source?.toLowerCase() !== filters.source.toLowerCase()) return false;
+    }
 
-  // Filter the jobs
-  const filteredJobs = jobs.filter(job => {
-    // Search Term (matches title or company)
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase();
-      if (!job.title?.toLowerCase().includes(term) && !job.company?.toLowerCase().includes(term)) {
-        return false;
-      }
-    }
-    
-    // Min Rating
-    if (minRating > 1 && (job.rating || 3) < minRating) {
-      return false;
-    }
-    
-    // Freshers Only - check text
-    if (freshersOnly) {
-      const isFresherTitle = job.title?.toLowerCase().match(/\b(intern|fresher|entry|junior|jr|trainee)\b/);
-      const isFresherExp = job.experience?.toLowerCase().match(/\b(intern|fresher|0-1|0-2)\b/);
-      if (!isFresherTitle && !isFresherExp) return false;
-    }
-    
-    // Source
-    if (sourceFilter !== 'All') {
-      if (sourceFilter === 'JobSpy') {
-        if (!job.source?.includes('LinkedIn') && !job.source?.includes('Indeed') && !job.source?.includes('Glassdoor') && !job.source?.includes('ZipRecruiter')) {
-          return false;
-        }
-      } else if (!job.source?.includes(sourceFilter)) {
-        return false;
-      }
-    }
-    
     return true;
   });
 
+  function renderFilterBar() {
+    return (
+      <div className="job-board-filter-bar">
+        <input
+          type="text"
+          className="job-board-filter-input"
+          placeholder="Search keyword ..."
+          value={filters.keyword}
+          onChange={(e) => setFilters((f) => ({ ...f, keyword: e.target.value }))}
+        />
+
+        <select
+          className="job-board-filter-select"
+          value={filters.minRating}
+          onChange={(e) => setFilters((f) => ({ ...f, minRating: e.target.value }))}
+        >
+          {RATING_OPTIONS.map((opt) => (
+            <option key={opt} value={opt}>
+              {opt === 'All' ? 'All Ratings' : `${opt} ★ & above`}
+            </option>
+          ))}
+        </select>
+
+        <label className="job-board-freshers-label">
+          <input
+            type="checkbox"
+            checked={filters.freshersOnly}
+            onChange={(e) => setFilters((f) => ({ ...f, freshersOnly: e.target.checked }))}
+          />
+          Freshers Only
+        </label>
+
+        <select
+          className="job-board-filter-select"
+          value={filters.source}
+          onChange={(e) => setFilters((f) => ({ ...f, source: e.target.value }))}
+        >
+          {SOURCE_OPTIONS.map((opt) => (
+            <option key={opt} value={opt}>
+              {opt === 'All' ? 'All Sources' : opt}
+            </option>
+          ))}
+        </select>
+      </div>
+    );
+  }
+
+  if (loading && jobs.length === 0) {
+    return (
+      <div className="job-board-empty">
+        <p>System scanning for new jobs...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="job-board">
-      {/* Filters Bar */}
-      <div className="job-board__filters">
-        <input 
-          type="text" 
-          className="job-board__filter-input"
-          placeholder="Search role or company..." 
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
-        
-        <select 
-          className="job-board__filter-select"
-          value={minRating}
-          onChange={(e) => setMinRating(Number(e.target.value))}
-        >
-          <option value={1}>Any Rating</option>
-          <option value={3}>3+ Stars ⭐</option>
-          <option value={4}>4+ Stars ⭐</option>
-          <option value={5}>5 Stars ⭐</option>
-        </select>
-        
-        <select 
-          className="job-board__filter-select"
-          value={sourceFilter}
-          onChange={(e) => setSourceFilter(e.target.value)}
-        >
-          <option value="All">All Sources</option>
-          <option value="Greenhouse">Greenhouse</option>
-          <option value="Lever">Lever</option>
-          <option value="Ashby">Ashby</option>
-          <option value="SmartRecruiters">SmartRecruiters</option>
-          <option value="JobSpy">JobSpy Boards</option>
-        </select>
-        
-        <label className="job-board__filter-checkbox">
-          <input 
-            type="checkbox" 
-            checked={freshersOnly}
-            onChange={(e) => setFreshersOnly(e.target.checked)}
-          />
-          🎓 Freshers Only
-        </label>
-      </div>
+      <h2 className="job-board-heading">Latest Opportunities</h2>
+      {renderFilterBar()}
 
-      {/* Job List */}
-      {loading ? (
-        <div className="job-board__empty">
-          <div className="job-board__empty-text">Loading jobs...</div>
-        </div>
-      ) : filteredJobs.length === 0 ? (
-        <div className="job-board__empty">
-          <div className="job-board__empty-text">No jobs found matching your criteria.</div>
-        </div>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {filteredJobs.map((job) => (
-            <div key={job.job_id} className="job-card">
-              <div className="job-card__header">
-                <span className="job-card__company">{job.company || 'UNKNOWN'}</span>
-                {getRatingBadge(job.rating || 3)}
-              </div>
-              
-              <div className="job-card__body">
-                <h2 className="job-card__title">{job.title}</h2>
-                
-                <div className="job-card__pills">
-                  <span className="job-card__pill">📍 {job.location || 'India'}</span>
-                  <span className="job-card__pill">🕐 {job.experience || 'Not Specified'}</span>
-                  <span className="job-card__pill job-card__pill--salary">💰 {job.salary || 'Not Disclosed'}</span>
-                  <span className="job-card__pill job-card__pill--source">🔗 {job.source || 'Unknown'}</span>
-                </div>
-                
-                <div className="job-card__footer">
-                  <span className="job-card__time">Posted {getTimeAgo(job.scraped_at)}</span>
-                  <a href={job.url} target="_blank" rel="noreferrer" className="job-card__apply">
-                    APPLY_NOW →
-                  </a>
-                </div>
-              </div>
-            </div>
-          ))}
+      {filteredJobs.length === 0 && !loading && (
+        <div className="job-board-empty">
+          <p>No jobs match your filters. Try different criteria.</p>
         </div>
       )}
+
+      <div className="job-board-grid">
+        {filteredJobs.map((job) => {
+          const stars = '★'.repeat(Math.max(0, job.rating ?? 0));
+          const posted = job.scraped_at ? formatTimeAgo(job.scraped_at) : '—';
+          return (
+            <article key={job.job_id} className="job-card">
+              <div className="job-card-header">
+                <span className="job-card-company">{job.company}</span>
+                <span className="job-card-rating" title={`Rating: ${job.rating}/5`}>{stars}</span>
+              </div>
+              <h3 className="job-card-title">{job.title}</h3>
+
+              <div className="job-card-pills">
+                {job.location && <span className="pill pill-location">{job.location}</span>}
+                {job.experience && <span className="pill pill-experience">{job.experience}</span>}
+                {job.salary && <span className="pill pill-salary">{job.salary}</span>}
+              </div>
+
+              <div className="job-card-footer">
+                <span className="job-card-source">{job.source || 'Unknown'}</span>
+                <span className="job-card-time">{posted}</span>
+              </div>
+
+              <a
+                href={job.url || '#'}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="job-card-apply"
+              >
+                APPLY NOW
+              </a>
+            </article>
+          );
+        })}
+      </div>
     </div>
   );
 }
