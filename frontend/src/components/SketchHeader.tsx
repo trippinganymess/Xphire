@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import './SketchHeader.css';
 
@@ -20,7 +21,19 @@ export default function SketchHeader({
   onLogout,
   isTerminalView = true,
 }: SketchHeaderProps) {
+  const [showPfpDropdown, setShowPfpDropdown] = useState(false);
   const isRunning = status === 'running';
+
+  const togglePfpDropdown = () => {
+    if (onLogout) {
+      setShowPfpDropdown((prev) => !prev);
+    }
+  };
+
+  const handleSignOut = () => {
+    setShowPfpDropdown(false);
+    if (onLogout) onLogout();
+  };
 
   return (
     <header className="sketch-header">
@@ -34,12 +47,12 @@ export default function SketchHeader({
         </svg>
       </Link>
 
-      {/* ── Center: System Online + Light Bulb (Only in Terminal View) ── */}
+      {/* ── Center: Shortened Title + Light Bulb (Only in Terminal View) ── */}
       <div className="sketch-header__center">
         {isTerminalView ? (
           <>
             <span className="sketch-header__title">
-              {isRunning ? 'System working...' : 'System online'}
+              {isRunning ? 'Xphire' : 'Xphire'}
             </span>
             
             {/* Sketchy Light Bulb Icon */}
@@ -68,7 +81,7 @@ export default function SketchHeader({
           </>
         ) : (
           <span className="sketch-header__title" style={{ color: 'var(--ink-muted)' }}>
-            Job Board Auto-Sync Active
+            Xphire
           </span>
         )}
       </div>
@@ -83,9 +96,9 @@ export default function SketchHeader({
 
         {/* ── Right Box: PFP / Profile / Status ── */}
         <div
-          className={`sketch-header__box sketch-header__pfp ${onLogout ? 'sketch-header__pfp--clickable' : ''}`}
-          onClick={onLogout}
-          title={userName ? `Logged in as ${userName} (${userEmail}) - Click to logout` : 'Guest Agent'}
+          className={`sketch-header__box sketch-header__pfp ${onLogout ? 'sketch-header__pfp--clickable' : ''} ${showPfpDropdown ? 'open' : ''}`}
+          onClick={togglePfpDropdown}
+          title={userName ? `Logged in as ${userName} (${userEmail})${onLogout ? ' - Click for menu' : ''}` : 'Guest Agent'}
         >
           {avatarUrl ? (
             <img
@@ -99,6 +112,18 @@ export default function SketchHeader({
             </span>
           ) : (
             <span className="sketch-pfp-text">pfp</span>
+          )}
+
+          {onLogout && (
+            <div className="sketch-pfp-dropdown">
+              <button
+                type="button"
+                className="sketch-pfp-dropdown-item"
+                onClick={handleSignOut}
+              >
+                Sign Out
+              </button>
+            </div>
           )}
         </div>
       </div>
