@@ -1,0 +1,187 @@
+.job-board {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  gap: var(--space-md);
+  margin-top: var(--space-md);
+}
+
+.job-board__filters {
+  display: flex;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  background: var(--paper-bg);
+  border: var(--sketch-border-md);
+  border-radius: var(--sketch-radius-box);
+  box-shadow: var(--sketch-shadow);
+  overflow-x: auto;
+  align-items: center;
+}
+
+.job-board__filter-input,
+.job-board__filter-select {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  padding: 6px 12px;
+  background: var(--paper-surface);
+  border: var(--sketch-border-sm);
+  border-radius: var(--sketch-radius-btn);
+  color: var(--ink-black);
+  outline: none;
+  min-width: 140px;
+}
+
+.job-board__filter-input:focus,
+.job-board__filter-select:focus {
+  border-color: #00E676;
+}
+
+.job-board__filter-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.job-board__filter-checkbox input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--ink-black);
+  cursor: pointer;
+}
+
+.job-card {
+  display: flex;
+  flex-direction: column;
+  background: var(--paper-bg);
+  border: var(--sketch-border-md);
+  border-radius: var(--sketch-radius-box);
+  box-shadow: var(--sketch-shadow);
+  overflow: hidden;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.job-card:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: var(--sketch-shadow-lg);
+}
+
+.job-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-sm) var(--space-md);
+  background: var(--paper-surface);
+  border-bottom: var(--sketch-border-sm);
+}
+
+.job-card__company {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.job-card__rating {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
+  padding: 2px 8px;
+  background: #FFFBEB;
+  border: 1.5px solid var(--ink-black);
+  border-radius: 4px;
+  box-shadow: 1.5px 1.5px 0px var(--ink-black);
+  letter-spacing: 1px;
+}
+
+.job-card__body {
+  padding: var(--space-md) var(--space-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.job-card__title {
+  font-family: var(--font-mono);
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--ink-black);
+  margin: 0;
+  line-height: 1.3;
+}
+
+.job-card__pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  margin: var(--space-xs) 0;
+}
+
+.job-card__pill {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 10px;
+  background: var(--paper-surface);
+  border: 1.5px solid var(--ink-black);
+  border-radius: 4px;
+  box-shadow: 1.5px 1.5px 0px var(--ink-black);
+  color: var(--ink-black);
+}
+
+.job-card__pill--salary { background: #FEF9C3; }
+.job-card__pill--source { background: #E0F2FE; color: #0369A1; border-color: #0284C7; }
+
+.job-card__footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: var(--space-sm);
+}
+
+.job-card__apply {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 800;
+  padding: 8px 20px;
+  background: #FFE600;
+  color: var(--ink-black);
+  text-decoration: none;
+  border: var(--sketch-border-sm);
+  border-radius: var(--sketch-radius-btn);
+  box-shadow: var(--sketch-shadow);
+  text-transform: uppercase;
+  transition: all 0.15s ease;
+}
+
+.job-card__apply:active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0px var(--ink-black);
+}
+
+.job-card__time {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--ink-muted);
+  font-weight: 600;
+}
+
+.job-board__empty {
+  padding: var(--space-xl);
+  text-align: center;
+  background: var(--paper-bg);
+  border: var(--sketch-border-md);
+  border-radius: var(--sketch-radius-box);
+  box-shadow: var(--sketch-shadow);
+}
+
+.job-board__empty-text {
+  font-family: var(--font-hand);
+  font-size: 24px;
+  color: var(--ink-muted);
+}
