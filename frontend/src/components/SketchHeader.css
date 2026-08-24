@@ -4,8 +4,10 @@
 
 .sketch-header {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
+  gap: 12px;
   padding: 12px 18px;
   background: var(--paper-bg);
   border: var(--sketch-border-md);
@@ -13,6 +15,7 @@
   box-shadow: var(--sketch-shadow);
   margin-bottom: 28px;
   user-select: none;
+  box-sizing: border-box;
 }
 
 /* ── Square Corner Boxes (Logo & PFP) ── */
@@ -28,6 +31,7 @@
   box-shadow: 2px 2px 0px var(--ink-black);
   flex-shrink: 0;
   transition: transform 0.15s ease, box-shadow 0.15s ease;
+  min-width: 0;
 }
 
 .sketch-header__logo {
@@ -76,6 +80,8 @@
   display: flex;
   gap: var(--space-md);
   align-items: center;
+  flex-shrink: 0;
+  max-width: 100%;
 }
 
 /* ── Terminal Button ── */
@@ -91,6 +97,9 @@
   white-space: nowrap;
   cursor: pointer;
   transition: transform 0.1s ease, box-shadow 0.1s ease;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .sketch-header__terminal-btn:active {
@@ -104,7 +113,9 @@
   align-items: center;
   justify-content: center;
   gap: 16px;
-  flex: 1;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .sketch-header__title {
@@ -114,6 +125,8 @@
   color: #000000;
   letter-spacing: 0.02em;
   transform: rotate(-0.5deg);
+  white-space: normal;
+  word-break: break-word;
 }
 
 /* ── Bulb Structure & Glow ── */
@@ -123,6 +136,7 @@
   justify-content: center;
   line-height: 0;
   transition: filter 0.3s ease, transform 0.3s ease;
+  flex-shrink: 0;
 }
 
 .sketch-bulb__glow-fill {
@@ -143,6 +157,7 @@
 @media (max-width: 600px) {
   .sketch-header {
     padding: 8px 10px;
+    gap: 8px;
   }
   
   .sketch-header__box {
@@ -156,5 +171,11 @@
 
   .sketch-pfp-text {
     font-size: 1.3rem;
+  }
+
+  .sketch-header__terminal-btn {
+    font-size: 14px;
+    padding: 8px 16px;
+    max-width: 160px;
   }
 }
