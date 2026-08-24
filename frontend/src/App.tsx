@@ -1,13 +1,18 @@
 import { useState, useEffect } from 'react';
+import { HashRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import SketchHeader, { type SystemStatus } from './components/SketchHeader';
 import SketchTerminal, { type UserSession } from './components/SketchTerminal';
+import JobBoard from './components/JobBoard';
 import { supabase } from './lib/supabase';
 import { fetchUserProfile } from './lib/userService';
 import './App.css';
 
-export default function App() {
+// A wrapper component that passes the current route down to the header
+function AppLayout() {
   const [user, setUser] = useState<UserSession | null>(null);
   const [systemStatus, setSystemStatus] = useState<SystemStatus>('online');
+  const location = useLocation();
+  const isTerminalRoute = location.pathname === '/terminal';
 
   useEffect(() => {
     // Check active sessions and sets the user
@@ -61,16 +66,33 @@ export default function App() {
         userEmail={user?.email}
         avatarUrl={user?.avatarUrl}
         onLogout={user ? handleLogout : undefined}
+        isTerminalView={isTerminalRoute}
       />
 
-      {/* ── Main Terminal Body matching the sketch ── */}
+      {/* ── Main Body matching the sketch ── */}
       <main className="sketch-app-main">
-        <SketchTerminal
-          user={user}
-          onLogout={handleLogout}
-          onStatusChange={setSystemStatus}
-        />
+        <Routes>
+          <Route path="/" element={<JobBoard />} />
+          <Route 
+            path="/terminal" 
+            element={
+              <SketchTerminal
+                user={user}
+                onLogout={handleLogout}
+                onStatusChange={setSystemStatus}
+              />
+            } 
+          />
+        </Routes>
       </main>
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <Router>
+      <AppLayout />
+    </Router>
   );
 }

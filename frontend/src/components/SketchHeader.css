@@ -4,8 +4,11 @@
 
 .sketch-header {
   display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
   align-items: center;
   justify-content: space-between;
+  gap: 12px;
   padding: 12px 18px;
   background: var(--paper-bg);
   border: var(--sketch-border-md);
@@ -13,6 +16,8 @@
   box-shadow: var(--sketch-shadow);
   margin-bottom: 28px;
   user-select: none;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 /* ── Square Corner Boxes (Logo & PFP) ── */
@@ -28,6 +33,8 @@
   box-shadow: 2px 2px 0px var(--ink-black);
   flex-shrink: 0;
   transition: transform 0.15s ease, box-shadow 0.15s ease;
+  min-width: 0;
+  position: relative;
 }
 
 .sketch-header__logo {
@@ -37,11 +44,11 @@
 .sketch-header__pfp {
   cursor: default;
   overflow: hidden;
-  position: relative;
 }
 
 .sketch-header__pfp--clickable {
   cursor: pointer;
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
 }
 
 .sketch-header__pfp--clickable:hover {
@@ -51,8 +58,45 @@
 }
 
 .sketch-header__pfp--clickable:active {
-  transform: translate(1px, 1px);
+  transform: translate(2px, 2px);
   box-shadow: 1px 1px 0px var(--ink-black);
+}
+
+/* ── PFP Dropdown Menu ── */
+.sketch-pfp-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 8px;
+  background: var(--paper-bg);
+  border: var(--sketch-border-md);
+  border-radius: var(--sketch-radius-box);
+  box-shadow: var(--sketch-shadow);
+  padding: 8px 0;
+  min-width: 120px;
+  z-index: 50;
+  display: none;
+}
+
+.sketch-header__pfp--clickable.open .sketch-pfp-dropdown {
+  display: block;
+}
+
+.sketch-pfp-dropdown-item {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink-black);
+  padding: 8px 16px;
+  background: none;
+  border: none;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+}
+
+.sketch-pfp-dropdown-item:hover {
+  background: var(--paper-surface);
 }
 
 .sketch-pfp-img {
@@ -60,16 +104,46 @@
   height: 100%;
   object-fit: cover;
   display: block;
-  border-radius: 2px;
 }
 
 .sketch-pfp-text {
-  font-family: var(--font-cursive);
-  font-size: 1.85rem;
-  font-weight: 700;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 800;
   color: var(--ink-black);
   line-height: 1;
-  letter-spacing: -0.02em;
+}
+
+/* ── Actions Container ── */
+.sketch-header__actions {
+  display: flex;
+  gap: var(--space-md);
+  align-items: center;
+  flex-shrink: 0;
+  max-width: 100%;
+}
+
+/* ── Terminal Button ── */
+.sketch-header__terminal-btn {
+  text-decoration: none;
+  font-family: var(--font-mono);
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--ink-black);
+  padding: 12px 32px;
+  width: auto;
+  height: auto;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sketch-header__terminal-btn:active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0px var(--ink-black);
 }
 
 /* ── Center: Handwritten Title + Reactive Light Bulb ── */
@@ -78,7 +152,9 @@
   align-items: center;
   justify-content: center;
   gap: 16px;
-  flex: 1;
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .sketch-header__title {
@@ -88,6 +164,9 @@
   color: #000000;
   letter-spacing: 0.02em;
   transform: rotate(-0.5deg);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* ── Bulb Structure & Glow ── */
@@ -97,6 +176,7 @@
   justify-content: center;
   line-height: 0;
   transition: filter 0.3s ease, transform 0.3s ease;
+  flex-shrink: 0;
 }
 
 .sketch-bulb__glow-fill {
@@ -117,6 +197,7 @@
 @media (max-width: 600px) {
   .sketch-header {
     padding: 8px 10px;
+    gap: 8px;
   }
   
   .sketch-header__box {
@@ -130,5 +211,11 @@
 
   .sketch-pfp-text {
     font-size: 1.3rem;
+  }
+
+  .sketch-header__terminal-btn {
+    font-size: 14px;
+    padding: 8px 16px;
+    max-width: 160px;
   }
 }
