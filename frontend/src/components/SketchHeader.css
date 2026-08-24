@@ -42,6 +42,7 @@
 
 .sketch-header__pfp--clickable {
   cursor: pointer;
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
 }
 
 .sketch-header__pfp--clickable:hover {
@@ -51,7 +52,7 @@
 }
 
 .sketch-header__pfp--clickable:active {
-  transform: translate(1px, 1px);
+  transform: translate(2px, 2px);
   box-shadow: 1px 1px 0px var(--ink-black);
 }
 
@@ -60,16 +61,38 @@
   height: 100%;
   object-fit: cover;
   display: block;
-  border-radius: 2px;
 }
 
 .sketch-pfp-text {
-  font-family: var(--font-cursive);
-  font-size: 1.85rem;
-  font-weight: 700;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 800;
   color: var(--ink-black);
   line-height: 1;
-  letter-spacing: -0.02em;
+}
+
+/* ── Actions Container ── */
+.sketch-header__actions {
+  display: flex;
+  gap: var(--space-md);
+  align-items: center;
+}
+
+/* ── Terminal Button ── */
+.sketch-header__terminal-btn {
+  text-decoration: none;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--ink-black);
+  padding: 0 16px;
+  cursor: pointer;
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+
+.sketch-header__terminal-btn:active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0px var(--ink-black);
 }
 
 /* ── Center: Handwritten Title + Reactive Light Bulb ── */
