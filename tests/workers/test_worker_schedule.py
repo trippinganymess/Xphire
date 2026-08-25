@@ -1,55 +1,71 @@
 import pytest
-from unittest.mock import patch, MagicMock
+import os
+from unittest.mock import patch, AsyncMock, MagicMock
+import httpx
 
-from workers.worker_schedule import schedule_jobs
+from workers.worker_schedule import (
+    fetch_subscriptions,
+    run_pipeline_for_subscription,
+    main,
+)
 
 
 # ---------------------------------------------------------------------------
-# Tests
+# Tests for fetch_subscriptions
 # ---------------------------------------------------------------------------
-def test_schedule_jobs_adds_scrape_and_email_jobs():
-    """schedule_jobs registers two background jobs (scrape + email)."""
-    with patch("workers.worker_schedule.BackgroundScheduler") as MockScheduler:
-        mock_scheduler = MockScheduler.return_value
+@pytest.mark.asyncio
+async def test_fetch_subscriptions_returns_rows(mock_env_vars):
+    mock_env_vars.set(SUPABASE_URL="https://example.supabase.co", SUPABASE_SERVICE_KEY="svc-key")
+    with patch("httpx.AsyncClient.get") as mock_get:
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.json.return_value = [{"id": 1, "job_title": "Engineer"}]
+        mock_get.return_value = mock_resp
 
-        schedule_jobs()
-
-        assert mock_scheduler.add_job.call_count == 2
-
-        calls = mock_scheduler.add_job.call_args_list
-        # First job should be the scrape worker
-        assert calls[0][1]["func"].__name__ == "run_scrape_worker"
-        # Second job should be the email worker
-        assert calls[1][1]["func"].__name__ == "run_email_worker"
+        rows = await fetch_subscriptions(utc_hour=12)
+        assert len(rows) == 1
+        assert rows[0]["job_title"] == "Engineer"
 
 
-def test_schedule_jobs_starts_scheduler():
-    """The scheduler is started after jobs are added."""
-    with patch("workers.worker_schedule.BackgroundScheduler") as MockScheduler:
-        mock_scheduler = MockScheduler.return_value
-
-        schedule_jobs()
-
-        mock_scheduler.start.assert_called_once()
+@pytest.mark.asyncio
+async def test_fetch_subscriptions_returns_empty_on_error(mock_env_vars):
+    mock_env_vars.set(SUPABASE_URL="https://example.supabase.co", SUPABASE_SERVICE_KEY="svc-key")
+    with patch("httpx.AsyncClient.get", side_effect=Exception("Network error")):
+        rows = await fetch_subscriptions(utc_hour=12)
+        assert rows == []
 
 
-def test_schedule_jobs_already_running_does_not_add_jobs():
-    """If the scheduler is already running, no duplicate jobs are added."""
-    with patch("workers.worker_schedule.BackgroundScheduler") as MockScheduler:
-        mock_scheduler = MockScheduler.return_value
-        mock_scheduler.running = True
+# ---------------------------------------------------------------------------
+# Tests for run_pipeline_for_subscription
+# ---------------------------------------------------------------------------
+@pytest.mark.asyncio
+async def test_run_pipeline_for_subscription_sets_env_and_calls_email_main(mock_env_vars):
+    sub = {
+        "id": 1,
+        "job_title": "Engineer",
+        "recipient_email": "test@example.com",
+        "freshers_only": True,
+        "min_stars": 4,
+    }
+    with patch("workers.worker_schedule.email_main") as mock_email_main:
+        mock_email_main.return_value = None  # async function
+        await run_pipeline_for_subscription(sub)
+        assert os.environ["JOB_TITLE"] == "Engineer"
+        assert os.environ["RECIPIENT_EMAIL"] == "test@example.com"
+        assert os.environ["FRESHERS_ONLY"] == "true"
+        assert os.environ["MIN_STARS"] == "4"
+        mock_email_main.assert_called_once()
 
-        schedule_jobs()
 
-        mock_scheduler.add_job.assert_not_called()
-
-
-def test_schedule_jobs_start_error_is_logged(caplog):
-    """If scheduler.start() raises, the error is logged."""
-    with patch("workers.worker_schedule.BackgroundScheduler") as MockScheduler:
-        mock_scheduler = MockScheduler.return_value
-        mock_scheduler.start.side_effect = Exception("Start failed")
-
-        schedule_jobs()
-
-        assert "Start failed" in caplog.text
+# ---------------------------------------------------------------------------
+# Tests for main
+# ---------------------------------------------------------------------------
+@pytest.mark.asyncio
+async def test_main_calls_fetch_and_run(mock_env_vars):
+    mock_env_vars.set(SUPABASE_URL="https://example.supabase.co", SUPABASE_SERVICE_KEY="svc-key")
+    with patch("workers.worker_schedule.fetch_subscriptions") as mock_fetch:
+        mock_fetch.return_value = [{"id": 1, "job_title": "Engineer", "recipient_email": "a@b.com"}]
+        with patch("workers.worker_schedule.run_pipeline_for_subscription") as mock_run:
+            await main()
+            mock_fetch.assert_called_once()
+            mock_run.assert_called_once_with({"id": 1, "job_title": "Engineer", "recipient_email": "a@b.com"})

@@ -1,159 +1,63 @@
 import pytest
-import pandas as pd
+import os
 from unittest.mock import patch, AsyncMock, MagicMock
+import pandas as pd
 
-from workers.worker_scrape import run_scrape_worker
+from workers.worker_scrape import (
+    get_keywords,
+    scrape_keyword,
+    main,
+    DEFAULT_KEYWORDS,
+)
 
 
 # ---------------------------------------------------------------------------
-# Tests
+# Tests for get_keywords
+# ---------------------------------------------------------------------------
+def test_get_keywords_returns_default_when_env_not_set(mock_env_vars):
+    mock_env_vars.unset("SCRAPE_KEYWORDS")
+    result = get_keywords()
+    assert result == DEFAULT_KEYWORDS
+
+
+def test_get_keywords_returns_parsed_list_when_env_set(mock_env_vars):
+    mock_env_vars.set(SCRAPE_KEYWORDS="engineer, developer")
+    result = get_keywords()
+    assert result == ["engineer", "developer"]
+
+
+# ---------------------------------------------------------------------------
+# Tests for scrape_keyword
 # ---------------------------------------------------------------------------
 @pytest.mark.asyncio
-async def test_run_scrape_worker_success(
-    mock_httpx_client, mock_genai_client, mock_env_vars, sample_dataframe, sample_job_dicts
+async def test_scrape_keyword_returns_empty_list(mock_httpx_client):
+    result = await scrape_keyword("test", mock_httpx_client)
+    assert result == []
+
+
+# ---------------------------------------------------------------------------
+# Tests for main
+# ---------------------------------------------------------------------------
+@pytest.mark.asyncio
+async def test_main_scrapes_and_processes(
+    mock_httpx_client, mock_genai_client, mock_env_vars, sample_job_dicts
 ):
-    """Happy path: scrape → dedup → enrich → save."""
     mock_env_vars.set(GEMINI_API_KEY="test-key")
-
-    with patch("workers.worker_scrape.scrape_jobs") as mock_scrape:
-        mock_scrape.return_value = sample_dataframe
-
+    with patch("workers.worker_scrape.scrape_keyword") as mock_scrape_kw:
+        mock_scrape_kw.return_value = sample_job_dicts
         with patch("workers.worker_scrape.Deduper") as MockDeduper:
             deduper_instance = MockDeduper.return_value
             deduper_instance.get_unseen_jobs = AsyncMock(return_value=sample_job_dicts)
             deduper_instance.save_seen_jobs = AsyncMock()
-
             with patch("workers.worker_scrape.enrich_jobs") as mock_enrich:
                 mock_enrich.return_value = sample_job_dicts
-
-                await run_scrape_worker()
-
-                mock_scrape.assert_called_once()
+                with patch("workers.worker_scrape.httpx.AsyncClient") as mock_client_class:
+                    mock_client_class.return_value.__aenter__.return_value = mock_httpx_client
+                    await main()
+                # Ensure scrape_keyword was called for each default keyword
+                assert mock_scrape_kw.call_count == len(DEFAULT_KEYWORDS)
                 deduper_instance.get_unseen_jobs.assert_called_once()
                 mock_enrich.assert_called_once_with(sample_job_dicts)
                 deduper_instance.save_seen_jobs.assert_called_once_with(
                     mock_httpx_client, sample_job_dicts
-                )
-
-
-@pytest.mark.asyncio
-async def test_run_scrape_worker_empty_scrape(
-    mock_httpx_client, mock_genai_client, mock_env_vars
-):
-    """When scraping returns an empty DataFrame, no further steps are taken."""
-    with patch("workers.worker_scrape.scrape_jobs") as mock_scrape:
-        mock_scrape.return_value = pd.DataFrame()
-
-        with patch("workers.worker_scrape.Deduper") as MockDeduper:
-            deduper_instance = MockDeduper.return_value
-            deduper_instance.get_unseen_jobs = AsyncMock()
-
-            await run_scrape_worker()
-
-            deduper_instance.get_unseen_jobs.assert_not_called()
-
-
-@pytest.mark.asyncio
-async def test_run_scrape_worker_no_new_jobs(
-    mock_httpx_client, mock_genai_client, mock_env_vars, sample_dataframe
-):
-    """When dedup returns no unseen jobs, enrichment and save are skipped."""
-    with patch("workers.worker_scrape.scrape_jobs") as mock_scrape:
-        mock_scrape.return_value = sample_dataframe
-
-        with patch("workers.worker_scrape.Deduper") as MockDeduper:
-            deduper_instance = MockDeduper.return_value
-            deduper_instance.get_unseen_jobs = AsyncMock(return_value=[])
-
-            with patch("workers.worker_scrape.enrich_jobs") as mock_enrich:
-                await run_scrape_worker()
-
-                mock_enrich.assert_not_called()
-                deduper_instance.save_seen_jobs.assert_not_called()
-
-
-@pytest.mark.asyncio
-async def test_run_scrape_worker_enrich_fallback(
-    mock_httpx_client, mock_genai_client, mock_env_vars, sample_dataframe, sample_job_dicts
-):
-    """Even when enrichment returns fallback values, jobs are still saved."""
-    mock_env_vars.set(GEMINI_API_KEY="test-key")
-
-    fallback_jobs = [
-        {
-            **job,
-            "rating": 3,
-            "location": job.get("location", "Unknown"),
-            "experience": "N/A",
-            "salary": "N/A",
-        }
-        for job in sample_job_dicts
-    ]
-
-    with patch("workers.worker_scrape.scrape_jobs") as mock_scrape:
-        mock_scrape.return_value = sample_dataframe
-
-        with patch("workers.worker_scrape.Deduper") as MockDeduper:
-            deduper_instance = MockDeduper.return_value
-            deduper_instance.get_unseen_jobs = AsyncMock(return_value=sample_job_dicts)
-            deduper_instance.save_seen_jobs = AsyncMock()
-
-            with patch("workers.worker_scrape.enrich_jobs") as mock_enrich:
-                mock_enrich.return_value = fallback_jobs
-
-                await run_scrape_worker()
-
-                deduper_instance.save_seen_jobs.assert_called_once_with(
-                    mock_httpx_client, fallback_jobs
-                )
-
-
-@pytest.mark.asyncio
-async def test_run_scrape_worker_save_error(
-    mock_httpx_client, mock_genai_client, mock_env_vars, sample_dataframe, sample_job_dicts, caplog
-):
-    """If save_seen_jobs raises, the error is logged and the worker does not crash."""
-    mock_env_vars.set(GEMINI_API_KEY="test-key")
-
-    with patch("workers.worker_scrape.scrape_jobs") as mock_scrape:
-        mock_scrape.return_value = sample_dataframe
-
-        with patch("workers.worker_scrape.Deduper") as MockDeduper:
-            deduper_instance = MockDeduper.return_value
-            deduper_instance.get_unseen_jobs = AsyncMock(return_value=sample_job_dicts)
-            deduper_instance.save_seen_jobs = AsyncMock(side_effect=Exception("Save failed"))
-
-            with patch("workers.worker_scrape.enrich_jobs") as mock_enrich:
-                mock_enrich.return_value = sample_job_dicts
-
-                await run_scrape_worker()
-
-                assert "Save failed" in caplog.text
-
-
-@pytest.mark.asyncio
-async def test_run_scrape_worker_passes_site_and_search_term(
-    mock_httpx_client, mock_genai_client, mock_env_vars, sample_dataframe, sample_job_dicts
-):
-    """The worker reads SITE and SEARCH_TERM from the environment."""
-    mock_env_vars.set(GEMINI_API_KEY="test-key", SITE="indeed", SEARCH_TERM="python developer")
-
-    with patch("workers.worker_scrape.scrape_jobs") as mock_scrape:
-        mock_scrape.return_value = sample_dataframe
-
-        with patch("workers.worker_scrape.Deduper") as MockDeduper:
-            deduper_instance = MockDeduper.return_value
-            deduper_instance.get_unseen_jobs = AsyncMock(return_value=sample_job_dicts)
-            deduper_instance.save_seen_jobs = AsyncMock()
-
-            with patch("workers.worker_scrape.enrich_jobs") as mock_enrich:
-                mock_enrich.return_value = sample_job_dicts
-
-                await run_scrape_worker()
-
-                mock_scrape.assert_called_once_with(
-                    site="indeed",
-                    search_term="python developer",
-                    location="India",
-                    results_wanted=10,
                 )

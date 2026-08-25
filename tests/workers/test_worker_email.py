@@ -1,92 +1,98 @@
 import pytest
-from unittest.mock import patch, AsyncMock, MagicMock
+from unittest.mock import patch, MagicMock
+from datetime import datetime, timezone, timedelta
 
-from workers.worker_email import run_email_worker
+from workers.worker_email import (
+    is_fresher_job,
+    _is_relevant_ats_job,
+    _hours_ago_iso,
+)
 
 
 # ---------------------------------------------------------------------------
-# Tests
+# Tests for is_fresher_job
 # ---------------------------------------------------------------------------
-@pytest.mark.asyncio
-async def test_run_email_worker_sends_emails(mock_smtp, mock_env_vars, sample_job_dicts):
-    """When jobs are available, send_email is called for each job."""
-    mock_env_vars.set(
-        SMTP_HOST="smtp.example.com",
-        SMTP_PORT="587",
-        SMTP_USER="user@example.com",
-        SMTP_PASS="secret",
-    )
-
-    with patch("workers.worker_email.send_email") as mock_send:
-        with patch("workers.worker_email.Deduper") as MockDeduper:
-            instance = MockDeduper.return_value
-            instance.get_unseen_jobs = AsyncMock(return_value=sample_job_dicts)
-
-            await run_email_worker()
-
-            assert mock_send.call_count == len(sample_job_dicts)
-            # Each call should include the job title in the subject
-            for job in sample_job_dicts:
-                mock_send.assert_any_call(
-                    to="user@example.com",  # default recipient
-                    subject=f"New Job: {job['title']}",
-                    body=job["description"],
-                )
+def test_is_fresher_job_true_for_intern_title():
+    job = {"title": "Software Engineer Intern", "experience": "", "description": ""}
+    assert is_fresher_job(job) is True
 
 
-@pytest.mark.asyncio
-async def test_run_email_worker_no_jobs(mock_smtp, mock_env_vars):
-    """When no unseen jobs exist, no email is sent."""
-    mock_env_vars.set(
-        SMTP_HOST="smtp.example.com",
-        SMTP_PORT="587",
-        SMTP_USER="user@example.com",
-        SMTP_PASS="secret",
-    )
-
-    with patch("workers.worker_email.send_email") as mock_send:
-        with patch("workers.worker_email.Deduper") as MockDeduper:
-            instance = MockDeduper.return_value
-            instance.get_unseen_jobs = AsyncMock(return_value=[])
-
-            await run_email_worker()
-
-            mock_send.assert_not_called()
+def test_is_fresher_job_false_for_senior():
+    job = {"title": "Senior Developer", "experience": "5+ years", "description": ""}
+    assert is_fresher_job(job) is False
 
 
-@pytest.mark.asyncio
-async def test_run_email_worker_send_error(mock_smtp, mock_env_vars, sample_job_dicts, caplog):
-    """If send_email raises, the error is logged and processing continues."""
-    mock_env_vars.set(
-        SMTP_HOST="smtp.example.com",
-        SMTP_PORT="587",
-        SMTP_USER="user@example.com",
-        SMTP_PASS="secret",
-    )
-
-    with patch("workers.worker_email.send_email", side_effect=Exception("Send failed")) as mock_send:
-        with patch("workers.worker_email.Deduper") as MockDeduper:
-            instance = MockDeduper.return_value
-            instance.get_unseen_jobs = AsyncMock(return_value=sample_job_dicts)
-
-            await run_email_worker()
-
-            # Should have attempted to send for every job
-            assert mock_send.call_count == len(sample_job_dicts)
-            assert "Send failed" in caplog.text
+def test_is_fresher_job_true_for_experience_fresher():
+    job = {"title": "Developer", "experience": "0-1 years", "description": ""}
+    assert is_fresher_job(job) is True
 
 
-@pytest.mark.asyncio
-async def test_run_email_worker_missing_smtp_config(mock_smtp, mock_env_vars, sample_job_dicts, caplog):
-    """Missing SMTP configuration is logged and no emails are sent."""
-    mock_env_vars.unset("SMTP_HOST")
+def test_is_fresher_job_true_for_description_fresher():
+    job = {"title": "Developer", "experience": "", "description": "entry-level position"}
+    assert is_fresher_job(job) is True
 
-    with patch("workers.worker_email.send_email") as mock_send:
-        with patch("workers.worker_email.Deduper") as MockDeduper:
-            instance = MockDeduper.return_value
-            instance.get_unseen_jobs = AsyncMock(return_value=sample_job_dicts)
 
-            await run_email_worker()
+def test_is_fresher_job_false_for_no_match():
+    job = {"title": "Manager", "experience": "10+ years", "description": "leadership role"}
+    assert is_fresher_job(job) is False
 
-            mock_send.assert_not_called()
-            assert "SMTP_HOST" in caplog.text
+
+# ---------------------------------------------------------------------------
+# Tests for _is_relevant_ats_job
+# ---------------------------------------------------------------------------
+def test__is_relevant_ats_job_true_for_india_location_and_tech_title():
+    assert _is_relevant_ats_job(
+        title="Software Engineer",
+        location="Bengaluru",
+        search_title="engineer",
+        freshers_only=False,
+    ) is True
+
+
+def test__is_relevant_ats_job_false_for_non_india_location():
+    assert _is_relevant_ats_job(
+        title="Software Engineer",
+        location="New York",
+        search_title="engineer",
+        freshers_only=False,
+    ) is False
+
+
+def test__is_relevant_ats_job_false_for_non_tech_title():
+    assert _is_relevant_ats_job(
+        title="Manager",
+        location="India",
+        search_title="engineer",
+        freshers_only=False,
+    ) is False
+
+
+def test__is_relevant_ats_job_freshers_only_true_with_fresher_title():
+    assert _is_relevant_ats_job(
+        title="Junior Developer",
+        location="India",
+        search_title="developer",
+        freshers_only=True,
+    ) is True
+
+
+def test__is_relevant_ats_job_freshers_only_false_without_fresher_title():
+    assert _is_relevant_ats_job(
+        title="Senior Developer",
+        location="India",
+        search_title="developer",
+        freshers_only=True,
+    ) is False
+
+
+# ---------------------------------------------------------------------------
+# Tests for _hours_ago_iso
+# ---------------------------------------------------------------------------
+def test__hours_ago_iso_returns_correct_format():
+    result = _hours_ago_iso(6)
+    assert isinstance(result, str)
+    dt = datetime.fromisoformat(result)
+    now = datetime.now(timezone.utc)
+    delta = now - dt
+    # Should be roughly 6 hours ago (allow 5 seconds tolerance)
+    assert abs(delta.total_seconds() - 6 * 3600) < 5
