@@ -2,23 +2,22 @@
 Shared scraping utilities for all Xphire workers.
 
 Centralises: stealth HTTP client, Google Sheets posting, mass-recruiter
-blocklist, proxy parsing, humanised pacing, and Google search term building.
+blocklist, proxy parsing, humanised pacing, Google search term building,
+ATS company lists, regex patterns, ATS fetchers, and JobSpy scraper.
 """
 
 import os
+import re
 import random
 import asyncio
-# pyrefly: ignore [missing-import]
+from typing import Dict, List, Any, Optional as _Optional
+
 import httpx
 import pandas as pd
-from typing import List, Optional
 
-# ============================================================================
+# ---------------------------------------------------------------------------
 # USER-AGENT ROTATION POOL
-# ============================================================================
-# Real-world UA strings from recent Chrome / Firefox / Safari releases.
-# One is picked at random per httpx client session so consecutive requests
-# don't share an identical fingerprint.
+# ---------------------------------------------------------------------------
 _USER_AGENTS = [
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
@@ -38,10 +37,10 @@ def get_random_user_agent() -> str:
     return random.choice(_USER_AGENTS)
 
 
-# ============================================================================
+# ---------------------------------------------------------------------------
 # STEALTH HTTP CLIENT FACTORY
-# ============================================================================
-def create_stealth_client(proxy: Optional[str] = None) -> httpx.AsyncClient:
+# ---------------------------------------------------------------------------
+def create_stealth_client(proxy: _Optional[str] = None) -> httpx.AsyncClient:
     """
     Build an httpx.AsyncClient that mimics a real browser.
 
@@ -73,10 +72,10 @@ def create_stealth_client(proxy: Optional[str] = None) -> httpx.AsyncClient:
     )
 
 
-# ============================================================================
+# ---------------------------------------------------------------------------
 # PROXY PARSING
-# ============================================================================
-def parse_proxy_list() -> Optional[List[str]]:
+# ---------------------------------------------------------------------------
+def parse_proxy_list() -> _Optional[List[str]]:
     """
     Read PROXY_URL env var.  Supports a single proxy or a comma-separated
     list for round-robin.  Returns None when unset.
@@ -87,16 +86,9 @@ def parse_proxy_list() -> Optional[List[str]]:
     return [p.strip() for p in proxy_url.split(",") if p.strip()]
 
 
-# ============================================================================
+# ---------------------------------------------------------------------------
 # GOOGLE SEARCH TERM BUILDER
-# ============================================================================
-# Google Jobs ignores search_term/location/hours_old entirely once you pass
-# google_search_term.  It only understands natural-language text that looks
-# like what Google's own Jobs search box would generate.
-#
-# To add a *verified* override for a title: search "{title} jobs" on
-# google.com, open the Jobs panel, apply filters, and copy the text that
-# appears in the panel's OWN search box (not the main Google search bar).
+# ---------------------------------------------------------------------------
 GOOGLE_QUERY_OVERRIDES: dict = {
     # "Software Engineer": "paste the verified string from Google Jobs here",
 }
@@ -109,9 +101,9 @@ def build_google_search_term(title: str) -> str:
     return f"{title} jobs near India since yesterday"
 
 
-# ============================================================================
+# ---------------------------------------------------------------------------
 # MASS-RECRUITER BLOCKLIST
-# ============================================================================
+# ---------------------------------------------------------------------------
 MASS_RECRUITERS = [
     "tcs", "tata consultancy services", "infosys", "wipro",
     "cognizant", "accenture", "capgemini", "tech mahindra",
@@ -131,10 +123,9 @@ def filter_mass_recruiters(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-# ============================================================================
+# ---------------------------------------------------------------------------
 # HUMANISED PACING
-# ============================================================================
-# Per-site delay ranges (seconds).
+# ---------------------------------------------------------------------------
 SITE_DELAY_RANGES = {
     "linkedin": (5, 12),
     "indeed":   (5, 12),
@@ -160,9 +151,9 @@ async def human_delay(site: str, is_between_titles: bool = False):
         await asyncio.sleep(delay)
 
 
-# ============================================================================
+# ---------------------------------------------------------------------------
 # GOOGLE FORMS DISPATCHER
-# ============================================================================
+# ---------------------------------------------------------------------------
 async def send_batch_to_google_sheet(
     client: httpx.AsyncClient,
     jobs: list,
@@ -231,9 +222,9 @@ async def send_batch_to_google_sheet(
     await asyncio.gather(*[_post_job(job) for job in jobs])
 
 
-# ============================================================================
+# ---------------------------------------------------------------------------
 # DATAFRAME -> DICT BRIDGE  (for Deduper + AI reviewer integration)
-# ============================================================================
+# ---------------------------------------------------------------------------
 def df_to_job_dicts(df: pd.DataFrame, source_override: str = "") -> list[dict]:
     """
     Convert a JobSpy DataFrame into the List[Dict] schema used by the
@@ -280,9 +271,6 @@ def filter_df_by_unseen(df: pd.DataFrame, unseen_ids: set) -> pd.DataFrame:
 # ============================================================================
 # SHARED SCRAPING: CONSTANTS, COMPANY LISTS, FILTERS, ATS, JOBSPY
 # ============================================================================
-
-import re
-from typing import Dict, Any, Optional as _Optional
 
 # pyrefly: ignore [missing-import]
 from jobspy import scrape_jobs as _jobspy_scrape_jobs

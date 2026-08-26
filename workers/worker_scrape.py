@@ -17,6 +17,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from utils.deduper import Deduper
 from utils.ai_reviewer import enrich_jobs
+from utils.scraping import scrape_jobspy, scrape_ats, parse_proxy_list, create_stealth_client
 
 # ---------------------------------------------------------------------------
 # Hard‑coded default search terms – used when SCRAPE_KEYWORDS is not set.
@@ -40,16 +41,29 @@ def get_keywords() -> List[str]:
 
 async def scrape_keyword(keyword: str, client: httpx.AsyncClient) -> List[Dict[str, Any]]:
     """
-    Placeholder for actual scraping logic using ats + jobspy.
-    Replace this with the real implementation that already exists in the repo.
+    Scrape jobs for a single keyword using both JobSpy and ATS endpoints.
     """
-    # --------------- BEGIN PLACEHOLDER ---------------
-    # In a real deployment, this function would call the local scraping
-    # modules (e.g., `run_ats_scrape` and `run_jobspy_scrape`) for the
-    # provided keyword.  For now it returns an empty list so the rest of
-    # the pipeline can be tested.
-    return []
-    # --------------- END PLACEHOLDER ---------------
+    proxy_list = parse_proxy_list()
+
+    # Run both scrapers concurrently
+    jobspy_task = scrape_jobspy(keyword, proxy_list, freshers_only=False)
+    ats_task = scrape_ats(client, keyword, freshers_only=False)
+
+    jobspy_results, ats_results = await asyncio.gather(jobspy_task, ats_task, return_exceptions=True)
+
+    combined: List[Dict[str, Any]] = []
+
+    if isinstance(jobspy_results, Exception):
+        print(f"[ERROR] JobSpy scrape for '{keyword}': {jobspy_results}")
+    else:
+        combined.extend(jobspy_results)
+
+    if isinstance(ats_results, Exception):
+        print(f"[ERROR] ATS scrape for '{keyword}': {ats_results}")
+    else:
+        combined.extend(ats_results)
+
+    return combined
 
 
 async def main():
@@ -57,7 +71,7 @@ async def main():
     print(f"[SCRAPE] Keywords: {keywords}")
 
     # We reuse the same httpx client for all HTTP calls (Supabase, etc.)
-    async with httpx.AsyncClient() as http_client:
+    async with create_stealth_client() as http_client:
         deduper = Deduper()
 
         all_jobs: List[Dict[str, Any]] = []
@@ -85,7 +99,6 @@ async def main():
             return
 
         # 3. Enrich with Gemini AI
-        from utils.ai_reviewer import enrich_jobs
         enriched = await enrich_jobs(unseen_jobs)
 
         # 4. Persist to Supabase (no emails triggered)
