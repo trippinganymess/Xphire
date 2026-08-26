@@ -15,11 +15,9 @@ Designed to run entirely on GitHub Actions (ubuntu-latest).
 """
 
 import os
-import re
 import asyncio
 import random
 import pandas as pd
-from jobspy import scrape_jobs
 from typing import List, Dict, Any
 
 from utils.ai_reviewer import enrich_jobs
@@ -32,24 +30,23 @@ from utils.scraping import (
     filter_mass_recruiters,
     human_delay,
     parse_proxy_list,
+    scrape_jobspy,
+    scrape_ats,
+    is_fresher_job,
+    CACHE_HOURS,
 )
 
 # ============================================================================
 # CONFIG
 # ============================================================================
-COUNTRY_INDEED  = "India"
-CACHE_HOURS     = 6
 MAX_EMAIL_JOBS  = 20
-SCRAPERS        = ["google", "linkedin", "indeed"]
 
 deduper = Deduper()
 
 # ============================================================================
 # EXPANDED ATS TARGET SLUGS (850+ Tech Companies & Startups)
 # ============================================================================
-# Greenhouse (300+ tech companies, unicorns & product startups)
-GREENHOUSE_SLUGS = list(dict.fromkeys([
-    # Top Indian Startups & Tech Unicorns
+# Moved to utils/scraping.py – imported above as needed.
     "razorpay", "phonepe", "groww", "swiggy", "zepto", "meesho", "postman",
     "curefit", "slice", "cred", "urbancompany", "nykaa", "blinkit",
     "policybazaar", "zomato", "cars24", "inmobi", "commerceiq", "coindcx",
