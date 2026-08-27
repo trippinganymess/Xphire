@@ -5,3 +5,9 @@ main = "worker.ts"
 [assets]
 directory = "./frontend/dist"
 not_found_handling = "single-page-application"
+
+# Public anon credentials (same values used by the frontend deploy workflow).
+# Override locally with a `.dev.vars` file if needed.
+[vars]
+SUPABASE_URL = "https://gwrrpxvkzsxbakbhnuuc.supabase.co"
+SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd3cnJweHZrenN4YmFrYmhudXVjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQzMDY4MjksImV4cCI6MjA5OTg4MjgyOX0.TFFhCjn9qd7MyAkPzwyTaAnLAmBYNsDpwCLFhXb0WU8"

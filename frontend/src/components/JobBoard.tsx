@@ -1,4 +1,5 @@
-import { useEffect, useState, useRef, useCallback, type FormEvent } from 'react';
+import { useState, useRef, useCallback, type FormEvent } from 'react';
+import { supabase } from '../lib/supabase';
 import './JobBoard.css';
 
 interface Job {
@@ -24,6 +25,12 @@ interface Filters {
 }
 
 const RATING_OPTIONS = ['All', '5', '4', '3', '2', '1'];
+const JOB_TABLE = 'Seen_job';
+const MAX_JOBS = 30;
+
+function escapeIlike(value: string): string {
+  return value.replace(/[%_,()]/g, (character) => `\\${character}`);
+}
 
 function formatTimeAgo(dateStr?: string): string {
   if (!dateStr) return '—';
@@ -36,50 +43,49 @@ function formatTimeAgo(dateStr?: string): string {
   return `${Math.floor(diffHr / 24)}d ago`;
 }
 
-/** Reads newline-delimited JSON as it arrives and mounts each record immediately. */
-async function readJobStream(
-  filters: Filters,
-  onJob: (job: Job) => void,
-  signal: AbortSignal,
-): Promise<void> {
-  const response = await fetch('/api/jobs/stream', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Accept: 'application/x-ndjson' },
-    body: JSON.stringify(filters),
-    signal,
-  });
-  if (!response.ok) throw new Error(`Job stream failed (${response.status})`);
-  if (!response.body) throw new Error('Job stream returned no readable body.');
+/** Pulls matching rows from the public Seen_job table in Supabase. */
+async function fetchJobsFromSupabase(filters: Filters, signal: AbortSignal): Promise<Job[]> {
+  const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  let query = supabase
+    .from(JOB_TABLE)
+    .select('*')
+    .gte('created_at', since)
+    .order('rating', { ascending: false })
+    .order('created_at', { ascending: false })
+    .limit(MAX_JOBS)
+    .abortSignal(signal);
 
-  const reader = response.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = '';
-  try {
-    while (true) {
-      const { value, done } = await reader.read();
-      buffer += decoder.decode(value || new Uint8Array(), { stream: !done });
-      const lines = buffer.split('\n');
-      buffer = lines.pop() || '';
-      for (const line of lines) {
-        if (!line.trim()) continue;
-        try {
-          onJob(JSON.parse(line) as Job);
-        } catch (error) {
-          console.warn('Skipping malformed job record:', error);
-        }
-      }
-      if (done) break;
-    }
-    if (buffer.trim()) {
-      try {
-        onJob(JSON.parse(buffer) as Job);
-      } catch (error) {
-        console.warn('Skipping malformed job record:', error);
-      }
-    }
-  } finally {
-    reader.releaseLock();
+  const keyword = filters.keyword.trim();
+  if (keyword) {
+    const escaped = escapeIlike(keyword);
+    query = query.or(
+      `company.ilike.%${escaped}%,title.ilike.%${escaped}%,location.ilike.%${escaped}%`,
+    );
   }
+
+  const rating = Number(filters.rating);
+  if (Number.isFinite(rating) && rating > 0) {
+    query = query.gte('rating', Math.min(5, Math.max(1, rating)));
+  }
+
+  const experience = filters.experience.trim();
+  if (experience) {
+    query = query.ilike('experience', `%${escapeIlike(experience)}%`);
+  }
+
+  const location = filters.location.trim();
+  if (location) {
+    query = query.ilike('location', `%${escapeIlike(location)}%`);
+  }
+
+  const salary = filters.salary.trim();
+  if (salary) {
+    query = query.ilike('salary', `%${escapeIlike(salary)}%`);
+  }
+
+  const { data, error } = await query;
+  if (error) throw error;
+  return (data as Job[]) ?? [];
 }
 
 export default function JobBoard() {
@@ -93,6 +99,7 @@ export default function JobBoard() {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [hasSearched, setHasSearched] = useState(false);
 
   const abortControllerRef = useRef<AbortController | null>(null);
 
@@ -103,14 +110,20 @@ export default function JobBoard() {
     const controller = new AbortController();
     abortControllerRef.current = controller;
 
+    setHasSearched(true);
     setJobs([]);
     setError(null);
     setLoading(true);
 
-    readJobStream(queryFilters, (job) => setJobs((current) => [...current, job]), controller.signal)
+    fetchJobsFromSupabase(queryFilters, controller.signal)
+      .then((results) => {
+        if (!controller.signal.aborted) {
+          setJobs(results);
+        }
+      })
       .catch((reason: unknown) => {
         if ((reason as DOMException)?.name !== 'AbortError') {
-          console.error('Error fetching jobs:', reason);
+          console.error('Error fetching jobs from Supabase:', reason);
           setError('Unable to load opportunities right now.');
         }
       })
@@ -120,13 +133,6 @@ export default function JobBoard() {
         }
       });
   }, []);
-
-  useEffect(() => {
-    fetchJobs(filters);
-    return () => {
-      abortControllerRef.current?.abort();
-    };
-  }, []); // Run on initial mount
 
   const updateFilter = (key: keyof Filters, value: string) => {
     setFilters((current) => ({ ...current, [key]: value }));
@@ -186,27 +192,24 @@ export default function JobBoard() {
           onChange={(event) => updateFilter('salary', event.target.value)}
           aria-label="Filter by salary"
         />
-        <button
-          type="submit"
-          className="job-board-search-btn bg-[#FFE600] border-2 border-black shadow-[4px_4px_0px_#000000] font-mono font-bold text-black uppercase px-4 py-2 cursor-pointer transition-all hover:bg-[#FFF000] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none"
-        >
-          SEARCH
+        <button type="submit" className="job-board-search-btn" disabled={loading}>
+          {loading ? 'SEARCHING' : 'SEARCH'}
         </button>
       </form>
 
-      {loading && (
+      {hasSearched && loading && (
         <div className="job-board-empty">
           <p>Loading opportunities ...</p>
         </div>
       )}
 
-      {error && !loading && (
+      {hasSearched && error && !loading && (
         <div className="job-board-empty">
           <p>{error}</p>
         </div>
       )}
 
-      {!error && !loading && jobs.length === 0 && (
+      {hasSearched && !error && !loading && jobs.length === 0 && (
         <div className="job-board-empty">
           <p>No opportunities found. Try adjusting your filters.</p>
         </div>

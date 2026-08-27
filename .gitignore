@@ -9,3 +9,4 @@ review.md
 supabase/.temp/
 .aider*
 .codex/
+.wrangler/
