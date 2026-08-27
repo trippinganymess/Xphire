@@ -14,7 +14,9 @@ call fails/times out.
 import os
 import json
 import asyncio
-from typing import Any, Dict, List
+import time
+import re
+from typing import Any, Dict, List, Optional
 
 from google import genai
 from google.genai import types
@@ -68,6 +70,70 @@ _MODEL_CANDIDATES = [
     "gemma-4-31b-it",
 ]
 
+# ---------------------------------------------------------------------------
+# Rate limiter – ensures we stay below 30 RPM (1 call every 2 seconds)
+# ---------------------------------------------------------------------------
+_rate_lock = asyncio.Lock()
+_last_call_time = 0.0
+_MIN_INTERVAL = 2.0  # seconds between calls
+
+
+async def _rate_limit() -> None:
+    """Wait until at least _MIN_INTERVAL seconds have passed since the last API call."""
+    global _last_call_time
+    async with _rate_lock:
+        now = time.monotonic()
+        elapsed = now - _last_call_time
+        if elapsed < _MIN_INTERVAL:
+            await asyncio.sleep(_MIN_INTERVAL - elapsed)
+        _last_call_time = time.monotonic()
+
+
+# ---------------------------------------------------------------------------
+# Helper: extract retryDelay from a 429 error response
+# ---------------------------------------------------------------------------
+def _extract_retry_delay(exc: Exception) -> Optional[float]:
+    """Try to parse a retry delay (in seconds) from a Google API error response."""
+    try:
+        resp = getattr(exc, "response", None)
+        if resp is None:
+            return None
+
+        # Attempt to read JSON body
+        body = None
+        if hasattr(resp, "json"):
+            try:
+                body = resp.json()
+            except Exception:
+                pass
+        elif isinstance(resp, dict):
+            body = resp
+
+        if isinstance(body, dict):
+            error_info = body.get("error", {})
+            details = error_info.get("details", [])
+            for detail in details:
+                if isinstance(detail, dict):
+                    retry_delay = detail.get("retryDelay")
+                    if retry_delay is not None:
+                        if isinstance(retry_delay, str):
+                            match = re.match(r"(\d+)s", retry_delay)
+                            if match:
+                                return float(match.group(1))
+                        elif isinstance(retry_delay, (int, float)):
+                            return float(retry_delay)
+
+        # Fallback: check Retry-After header
+        if hasattr(resp, "headers"):
+            retry_after = resp.headers.get("Retry-After")
+            if retry_after:
+                try:
+                    return float(retry_after)
+                except ValueError:
+                    pass
+    except Exception:
+        pass
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -86,41 +152,58 @@ async def _enrich_single(
 
     prompt = _PROMPT.format(company=company, title=title, description=description)
 
+    MAX_RETRIES = 3
+    BASE_DELAY = 1.0  # seconds
+
     async with semaphore:
         success = False
         last_error = None
 
         for model_name in _MODEL_CANDIDATES:
-            try:
-                resp = await asyncio.to_thread(
-                    client.models.generate_content,
-                    model=model_name,
-                    contents=prompt,
-                    config=_GENERATION_CONFIG,
-                )
-                parsed: Dict[str, Any] = json.loads(resp.text)
+            for attempt in range(1, MAX_RETRIES + 1):
+                try:
+                    await _rate_limit()
+                    resp = await asyncio.to_thread(
+                        client.models.generate_content,
+                        model=model_name,
+                        contents=prompt,
+                        config=_GENERATION_CONFIG,
+                    )
+                    parsed: Dict[str, Any] = json.loads(resp.text)
 
-                rating = max(1, min(5, int(parsed.get("rating", 3))))
-                job["rating"] = rating
-                job["location"] = str(
-                    parsed.get("location") or job.get("location") or _FALLBACK["location"]
-                )
-                job["experience"] = str(parsed.get("experience") or _FALLBACK["experience"])
-                job["salary"] = str(parsed.get("salary") or _FALLBACK["salary"])
+                    rating = max(1, min(5, int(parsed.get("rating", 3))))
+                    job["rating"] = rating
+                    job["location"] = str(
+                        parsed.get("location") or job.get("location") or _FALLBACK["location"]
+                    )
+                    job["experience"] = str(parsed.get("experience") or _FALLBACK["experience"])
+                    job["salary"] = str(parsed.get("salary") or _FALLBACK["salary"])
 
-                stars = "⭐" * rating
-                print(f"  [AI {stars}] {company}: {title} (via {model_name})")
-                success = True
+                    stars = "⭐" * rating
+                    print(f"  [AI {stars}] {company}: {title} (via {model_name})")
+                    success = True
+                    break
+                except Exception as exc:
+                    last_error = exc
+                    err_str = str(exc)
+
+                    is_rate_limit = "429" in err_str or "RESOURCE_EXHAUSTED" in err_str
+                    if is_rate_limit:
+                        retry_delay = _extract_retry_delay(exc)
+                        if retry_delay is None:
+                            retry_delay = BASE_DELAY * (2 ** (attempt - 1))
+                        print(
+                            f"  [AI rate limit] {company} - {title}: "
+                            f"retrying in {retry_delay:.1f}s (attempt {attempt}/{MAX_RETRIES})"
+                        )
+                        await asyncio.sleep(retry_delay)
+                        continue  # retry same model
+                    else:
+                        # Non-rate-limit error – move to next model immediately
+                        break
+
+            if success:
                 break
-            except Exception as exc:
-                last_error = exc
-                err_str = str(exc)
-                if "429" in err_str or "RESOURCE_EXHAUSTED" in err_str:
-                    # Model limit reached or model not available on free tier, try next candidate
-                    continue
-                else:
-                    # Other error, try next candidate or fail to fallback
-                    continue
 
         if not success:
             print(f"  [AI fallback] {company} - {title}: {last_error}")
@@ -130,7 +213,6 @@ async def _enrich_single(
             job.setdefault("salary", _FALLBACK["salary"])
 
     return job
-
 
 
 # ---------------------------------------------------------------------------

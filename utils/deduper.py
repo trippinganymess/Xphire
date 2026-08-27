@@ -126,6 +126,20 @@ class Deduper:
             for job in jobs
         ]
 
+        # ------------------------------------------------------------------
+        # Pre-save deduplication: remove duplicate job_id entries within the
+        # same batch to avoid Postgres error 21000 (ON CONFLICT DO UPDATE
+        # command cannot affect row a second time).
+        # ------------------------------------------------------------------
+        seen_ids = set()
+        unique_payload = []
+        for item in payload:
+            jid = item["job_id"]
+            if jid not in seen_ids:
+                seen_ids.add(jid)
+                unique_payload.append(item)
+        payload = unique_payload
+
         for i in range(0, len(payload), 100):
             chunk = payload[i : i + 100]
             try:
