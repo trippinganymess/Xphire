@@ -131,14 +131,10 @@ class Deduper:
         # same batch to avoid Postgres error 21000 (ON CONFLICT DO UPDATE
         # command cannot affect row a second time).
         # ------------------------------------------------------------------
-        seen_ids = set()
-        unique_payload = []
-        for item in payload:
-            jid = item["job_id"]
-            if jid not in seen_ids:
-                seen_ids.add(jid)
-                unique_payload.append(item)
-        payload = unique_payload
+        # Keep the last occurrence: later enrichment/scrape results are the
+        # most relevant representation of a repeated job in this batch.
+        unique_by_id = {item["job_id"]: item for item in payload}
+        payload = list(unique_by_id.values())
 
         for i in range(0, len(payload), 100):
             chunk = payload[i : i + 100]

@@ -75,7 +75,9 @@ _MODEL_CANDIDATES = [
 # ---------------------------------------------------------------------------
 _rate_lock = asyncio.Lock()
 _last_call_time = 0.0
-_MIN_INTERVAL = 2.0  # seconds between calls
+_blocked_until = 0.0
+_MIN_INTERVAL = 2.1  # modest buffer below the 30 RPM free-tier ceiling
+_RETRY_BUFFER = 1.0
 
 
 async def _rate_limit() -> None:
@@ -83,10 +85,20 @@ async def _rate_limit() -> None:
     global _last_call_time
     async with _rate_lock:
         now = time.monotonic()
-        elapsed = now - _last_call_time
-        if elapsed < _MIN_INTERVAL:
-            await asyncio.sleep(_MIN_INTERVAL - elapsed)
+        next_call_at = max(_last_call_time + _MIN_INTERVAL, _blocked_until)
+        if now < next_call_at:
+            await asyncio.sleep(next_call_at - now)
         _last_call_time = time.monotonic()
+
+
+async def _apply_rate_limit_cooldown(delay: float) -> float:
+    """Pause this request and all queued requests for the server delay plus a buffer."""
+    global _blocked_until
+    wait_seconds = max(0.0, delay) + _RETRY_BUFFER
+    async with _rate_lock:
+        _blocked_until = max(_blocked_until, time.monotonic() + wait_seconds)
+    await asyncio.sleep(wait_seconds)
+    return wait_seconds
 
 
 # ---------------------------------------------------------------------------
@@ -96,8 +108,6 @@ def _extract_retry_delay(exc: Exception) -> Optional[float]:
     """Try to parse a retry delay (in seconds) from a Google API error response."""
     try:
         resp = getattr(exc, "response", None)
-        if resp is None:
-            return None
 
         # Attempt to read JSON body
         body = None
@@ -117,7 +127,7 @@ def _extract_retry_delay(exc: Exception) -> Optional[float]:
                     retry_delay = detail.get("retryDelay")
                     if retry_delay is not None:
                         if isinstance(retry_delay, str):
-                            match = re.match(r"(\d+)s", retry_delay)
+                            match = re.match(r"\s*(\d+(?:\.\d+)?)s", retry_delay)
                             if match:
                                 return float(match.group(1))
                         elif isinstance(retry_delay, (int, float)):
@@ -133,6 +143,11 @@ def _extract_retry_delay(exc: Exception) -> Optional[float]:
                     pass
     except Exception:
         pass
+    # google-genai exceptions often stringify the structured error while not
+    # exposing the response object.  Preserve the server-provided delay.
+    match = re.search(r"retryDelay['\"]?\s*:\s*['\"]?(\d+(?:\.\d+)?)s", str(exc))
+    if match:
+        return float(match.group(1))
     return None
 
 
@@ -192,11 +207,12 @@ async def _enrich_single(
                         retry_delay = _extract_retry_delay(exc)
                         if retry_delay is None:
                             retry_delay = BASE_DELAY * (2 ** (attempt - 1))
+                        wait_seconds = retry_delay + _RETRY_BUFFER
                         print(
                             f"  [AI rate limit] {company} - {title}: "
-                            f"retrying in {retry_delay:.1f}s (attempt {attempt}/{MAX_RETRIES})"
+                            f"retrying in {wait_seconds:.1f}s (attempt {attempt}/{MAX_RETRIES})"
                         )
-                        await asyncio.sleep(retry_delay)
+                        await _apply_rate_limit_cooldown(retry_delay)
                         continue  # retry same model
                     else:
                         # Non-rate-limit error – move to next model immediately
