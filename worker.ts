@@ -34,10 +34,6 @@ function escapeIlike(value: string): string {
   return value.replace(/[\\,*()]/g, (character) => `\\${character}`);
 }
 
-function addIlike(url: URL, column: string, value: string): void {
-  if (value) url.searchParams.set(column, `ilike.*${escapeIlike(value)}*`);
-}
-
 function buildSupabaseUrl(baseUrl: string, filters: JobFilters): string {
   const url = new URL(`${baseUrl.replace(/\/$/, '')}/rest/v1/${JOB_TABLE}`);
   url.searchParams.set('select', '*');

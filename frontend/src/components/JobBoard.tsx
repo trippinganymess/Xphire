@@ -70,7 +70,13 @@ async function readJobStream(
       }
       if (done) break;
     }
-    if (buffer.trim()) onJob(JSON.parse(buffer) as Job);
+    if (buffer.trim()) {
+      try {
+        onJob(JSON.parse(buffer) as Job);
+      } catch (error) {
+        console.warn('Skipping malformed job record:', error);
+      }
+    }
   } finally {
     reader.releaseLock();
   }
