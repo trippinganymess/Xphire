@@ -52,19 +52,6 @@ export default function JobBoard() {
     // Calculate a cutoff time: only show jobs scraped in the last 24 hours
     const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
-    // [DEBUG] First, count total jobs in DB to understand the gap
-    const { count: totalCount, error: countError } = await supabase
-      .from('Seen_job')
-      .select('*', { count: 'exact', head: true });
-    console.log(`[DEBUG] Total jobs in Seen_job table: ${totalCount}`);
-
-    // [DEBUG] Count jobs in the last 24h
-    const { count: recentCount, error: recentCountError } = await supabase
-      .from('Seen_job')
-      .select('*', { count: 'exact', head: true })
-      .gte('scraped_at', twentyFourHoursAgo);
-    console.log(`[DEBUG] Jobs in last 24h: ${recentCount}`);
-
     let query = supabase
       .from('Seen_job')
       .select('*')
