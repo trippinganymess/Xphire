@@ -80,6 +80,38 @@
   cursor: pointer;
 }
 
+.job-board-search-btn {
+  font-family: var(--font-mono);
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--ink-black);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  padding: 10px 22px;
+  background: var(--paper-surface);
+  border: var(--sketch-border-sm);
+  border-radius: 4px 6px 4px 5px;
+  box-shadow: 2px 2px 0px var(--ink-black);
+  cursor: pointer;
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+
+.job-board-search-btn:hover:not(:disabled) {
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0px var(--ink-black);
+}
+
+.job-board-search-btn:active:not(:disabled) {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0px var(--ink-black);
+}
+
+.job-board-search-btn:disabled {
+  opacity: 0.7;
+  cursor: wait;
+}
+
 /* ── Job Cards Grid ── */
 .job-board-grid {
   display: grid;
