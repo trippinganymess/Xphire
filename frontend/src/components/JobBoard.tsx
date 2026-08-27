@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useCallback, type FormEvent } from 'react';
 import './JobBoard.css';
 
 interface Job {
@@ -85,18 +85,29 @@ async function readJobStream(
 export default function JobBoard() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [filters, setFilters] = useState<Filters>({
-    keyword: '', rating: 'All', experience: '', location: '', salary: '',
+    keyword: '',
+    rating: 'All',
+    experience: '',
+    location: '',
+    salary: '',
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  const fetchJobs = useCallback((queryFilters: Filters) => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
     const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     setJobs([]);
     setError(null);
     setLoading(true);
 
-    readJobStream(filters, (job) => setJobs((current) => [...current, job]), controller.signal)
+    readJobStream(queryFilters, (job) => setJobs((current) => [...current, job]), controller.signal)
       .catch((reason: unknown) => {
         if ((reason as DOMException)?.name !== 'AbortError') {
           console.error('Error fetching jobs:', reason);
@@ -104,21 +115,33 @@ export default function JobBoard() {
         }
       })
       .finally(() => {
-        if (!controller.signal.aborted) setLoading(false);
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
       });
+  }, []);
 
-    return () => controller.abort();
-  }, [filters]);
+  useEffect(() => {
+    fetchJobs(filters);
+    return () => {
+      abortControllerRef.current?.abort();
+    };
+  }, []); // Run on initial mount
 
   const updateFilter = (key: keyof Filters, value: string) => {
     setFilters((current) => ({ ...current, [key]: value }));
+  };
+
+  const handleSearch = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    fetchJobs(filters);
   };
 
   return (
     <div className="job-board">
       <h2 className="job-board-heading">Latest Opportunities</h2>
 
-      <div className="job-board-filter-bar">
+      <form className="job-board-filter-bar" onSubmit={handleSearch}>
         <input
           type="text"
           className="job-board-filter-input"
@@ -163,11 +186,30 @@ export default function JobBoard() {
           onChange={(event) => updateFilter('salary', event.target.value)}
           aria-label="Filter by salary"
         />
-      </div>
+        <button
+          type="submit"
+          className="job-board-search-btn bg-[#FFE600] border-2 border-black shadow-[4px_4px_0px_#000000] font-mono font-bold text-black uppercase px-4 py-2 cursor-pointer transition-all hover:bg-[#FFF000] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none"
+        >
+          SEARCH
+        </button>
+      </form>
 
-      {error && <div className="job-board-empty"><p>{error}</p></div>}
+      {loading && (
+        <div className="job-board-empty">
+          <p>Loading opportunities ...</p>
+        </div>
+      )}
+
+      {error && !loading && (
+        <div className="job-board-empty">
+          <p>{error}</p>
+        </div>
+      )}
+
       {!error && !loading && jobs.length === 0 && (
-        <div className="job-board-empty"><p>No jobs match your filters. Try different criteria.</p></div>
+        <div className="job-board-empty">
+          <p>No opportunities found. Try adjusting your filters.</p>
+        </div>
       )}
 
       <div id="job-grid" className="job-board-grid" aria-live="polite" aria-busy={loading}>
