@@ -4,7 +4,6 @@
 
 [![Live Application](https://img.shields.io/badge/Live_Application-Open_Xphire-7C3AED?style=for-the-badge)](https://xphire.animesh-23gcebds018.workers.dev/#/)
 
-**Live deployment:** [xphire.animesh-23gcebds018.workers.dev](https://xphire.animesh-23gcebds018.workers.dev/#/)
 
 ---
 
