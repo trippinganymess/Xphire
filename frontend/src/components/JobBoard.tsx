@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import './JobBoard.css';
 
@@ -46,39 +46,68 @@ export default function JobBoard() {
     source: 'All',
   });
   const [loading, setLoading] = useState(false);
+  const isMountedRef = useRef(true);
+  const isFetchingRef = useRef(false);
 
-  const fetchJobs = async () => {
-    setLoading(true);
-    // Calculate a cutoff time: only show jobs scraped in the last 24 hours
-    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const fetchJobs = useCallback(async () => {
+    if (isFetchingRef.current) return;
+    isFetchingRef.current = true;
+    if (isMountedRef.current) setLoading(true);
 
-    let query = supabase
-      .from('Seen_job')
-      .select('*')
-      .gte('scraped_at', twentyFourHoursAgo)
-      .order('scraped_at', { ascending: false })
-      .limit(1000);
+    try {
+      // Calculate a cutoff time: only show jobs scraped in the last 24 hours
+      const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
-    // Apply filters client‑side because Supabase‑js does not support all filter types natively
-    // The full result set will be filtered after fetching.
-    // We could push down some filters (e.g., source) to the server, but for simplicity we
-    // keep it uniform and filter in JS.
-    const { data, error } = await query;
-    setLoading(false);
+      const query = supabase
+        .from('Seen_job')
+        .select('*')
+        .gte('scraped_at', twentyFourHoursAgo)
+        .order('scraped_at', { ascending: false })
+        .limit(1000);
 
-    if (error) {
-      console.error('Error fetching jobs:', error);
-      return;
+      // Apply filters client‑side because Supabase‑js does not support all filter types natively
+      // The full result set will be filtered after fetching.
+      // We could push down some filters (e.g., source) to the server, but for simplicity we
+      // keep it uniform and filter in JS.
+      const { data, error } = await query;
+
+      if (error) {
+        console.error('Error fetching jobs:', error);
+        return;
+      }
+
+      if (isMountedRef.current) setJobs(data as Job[]);
+    } finally {
+      if (isMountedRef.current) setLoading(false);
+      isFetchingRef.current = false;
     }
-
-    setJobs(data as Job[]);
-  };
+  }, []);
 
   useEffect(() => {
-    fetchJobs();
-    const interval = setInterval(fetchJobs, 60_000); // auto‑refresh every 60s
-    return () => clearInterval(interval);
-  }, []);
+    isMountedRef.current = true;
+    void fetchJobs();
+
+    const interval = setInterval(() => {
+      void fetchJobs();
+    }, 60_000); // polling fallback every 60s
+
+    const realtimeChannel = supabase
+      .channel('seen-job-board-updates')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'Seen_job' },
+        () => {
+          void fetchJobs();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      isMountedRef.current = false;
+      clearInterval(interval);
+      void supabase.removeChannel(realtimeChannel);
+    };
+  }, [fetchJobs]);
 
   // Apply client‑side filters
   const filteredJobs = jobs.filter((job) => {
