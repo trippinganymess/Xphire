@@ -280,7 +280,7 @@ from jobspy import scrape_jobs as _jobspy_scrape_jobs
 # ---------------------------------------------------------------------------
 COUNTRY_INDEED = "India"
 CACHE_HOURS = 6
-SCRAPERS = ["google", "linkedin", "indeed"]
+SCRAPERS = ["linkedin", "indeed"]
 
 # ---------------------------------------------------------------------------
 # ATS TARGET SLUGS (850+ Tech Companies & Startups)
