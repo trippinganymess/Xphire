@@ -78,6 +78,17 @@ _last_call_time = 0.0
 _blocked_until = 0.0
 _MIN_INTERVAL = 2.1  # modest buffer below the 30 RPM free-tier ceiling
 _RETRY_BUFFER = 1.0
+_AI_CALL_TIMEOUT_SECONDS = float(os.environ.get("AI_CALL_TIMEOUT_SECONDS", "60"))
+_AI_IDLE_TIMEOUT_SECONDS = float(os.environ.get("AI_IDLE_TIMEOUT_SECONDS", "300"))
+
+
+def _apply_fallback(job: Dict[str, Any]) -> Dict[str, Any]:
+    """Apply safe fallback enrichment values to a job dict."""
+    job.setdefault("rating", _FALLBACK["rating"])
+    job.setdefault("location", job.get("location") or _FALLBACK["location"])
+    job.setdefault("experience", _FALLBACK["experience"])
+    job.setdefault("salary", _FALLBACK["salary"])
+    return job
 
 
 async def _rate_limit() -> None:
@@ -178,11 +189,14 @@ async def _enrich_single(
             for attempt in range(1, MAX_RETRIES + 1):
                 try:
                     await _rate_limit()
-                    resp = await asyncio.to_thread(
-                        client.models.generate_content,
-                        model=model_name,
-                        contents=prompt,
-                        config=_GENERATION_CONFIG,
+                    resp = await asyncio.wait_for(
+                        asyncio.to_thread(
+                            client.models.generate_content,
+                            model=model_name,
+                            contents=prompt,
+                            config=_GENERATION_CONFIG,
+                        ),
+                        timeout=_AI_CALL_TIMEOUT_SECONDS,
                     )
                     parsed: Dict[str, Any] = json.loads(resp.text)
 
@@ -201,6 +215,13 @@ async def _enrich_single(
                 except Exception as exc:
                     last_error = exc
                     err_str = str(exc)
+                    if isinstance(exc, asyncio.TimeoutError):
+                        print(
+                            f"  [AI timeout] {company} - {title}: "
+                            f"model={model_name} attempt={attempt}/{MAX_RETRIES} "
+                            f"({_AI_CALL_TIMEOUT_SECONDS:.0f}s limit)"
+                        )
+                        continue
 
                     is_rate_limit = "429" in err_str or "RESOURCE_EXHAUSTED" in err_str
                     if is_rate_limit:
@@ -223,10 +244,7 @@ async def _enrich_single(
 
         if not success:
             print(f"  [AI fallback] {company} - {title}: {last_error}")
-            job.setdefault("rating", _FALLBACK["rating"])
-            job.setdefault("location", job.get("location") or _FALLBACK["location"])
-            job.setdefault("experience", _FALLBACK["experience"])
-            job.setdefault("salary", _FALLBACK["salary"])
+            _apply_fallback(job)
 
     return job
 
@@ -257,10 +275,7 @@ async def enrich_jobs(jobs: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     if not api_key:
         print("[AI] GEMINI_API_KEY not set - applying fallback values to all jobs.")
         for job in jobs:
-            job.setdefault("rating", _FALLBACK["rating"])
-            job.setdefault("location", job.get("location") or _FALLBACK["location"])
-            job.setdefault("experience", _FALLBACK["experience"])
-            job.setdefault("salary", _FALLBACK["salary"])
+            _apply_fallback(job)
         return jobs
 
     client = genai.Client(api_key=api_key)
@@ -268,20 +283,38 @@ async def enrich_jobs(jobs: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     semaphore = asyncio.Semaphore(5)
 
     print(f"\n[AI] Enriching {len(jobs)} new job(s) via Gemini AI pipeline...")
-    tasks = [_enrich_single(client, job, semaphore) for job in jobs]
-    results = await asyncio.gather(*tasks, return_exceptions=True)
+    task_to_meta = {
+        asyncio.create_task(_enrich_single(client, job, semaphore)): (idx, job)
+        for idx, job in enumerate(jobs)
+    }
+    pending = set(task_to_meta.keys())
+    enriched_by_index: List[Optional[Dict[str, Any]]] = [None] * len(jobs)
 
-    enriched: List[Dict[str, Any]] = []
-    for job, result in zip(jobs, results):
-        if isinstance(result, Exception):
-            # gather() swallowed an unhandled exception - apply fallback
-            print(f"  [AI gather error] {job.get('company')}: {result}")
-            job.setdefault("rating", _FALLBACK["rating"])
-            job.setdefault("location", job.get("location") or _FALLBACK["location"])
-            job.setdefault("experience", _FALLBACK["experience"])
-            job.setdefault("salary", _FALLBACK["salary"])
-            enriched.append(job)
-        else:
-            enriched.append(result)
+    while pending:
+        done, pending = await asyncio.wait(
+            pending,
+            timeout=_AI_IDLE_TIMEOUT_SECONDS,
+            return_when=asyncio.FIRST_COMPLETED,
+        )
 
-    return enriched
+        if not done:
+            print(
+                f"[AI] No enrichment progress for {_AI_IDLE_TIMEOUT_SECONDS:.0f}s. "
+                "Cancelling pending AI tasks and continuing with fallback values."
+            )
+            for task in pending:
+                task.cancel()
+                idx, job = task_to_meta[task]
+                enriched_by_index[idx] = _apply_fallback(job)
+            pending = set()
+            break
+
+        for task in done:
+            idx, job = task_to_meta[task]
+            try:
+                enriched_by_index[idx] = task.result()
+            except Exception as exc:
+                print(f"  [AI gather error] {job.get('company')}: {exc}")
+                enriched_by_index[idx] = _apply_fallback(job)
+
+    return [job if job is not None else _apply_fallback(jobs[i]) for i, job in enumerate(enriched_by_index)]
