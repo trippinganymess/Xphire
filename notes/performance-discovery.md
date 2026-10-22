@@ -1,5 +1,5 @@
 ---
-status: in_progress
+status: in_review
 branch: "V2/performance-discovery"
 blocked_by: ["01"]
 ---
@@ -57,4 +57,4 @@ Final commands/results and PR status are recorded below after verification.
 - Python 3.11.16: `/tmp/xphire-quality-py311/bin/python -m ruff check .` passed; `-m pytest -q` → **36 passed, 10 xfailed**. `python3 scripts/check_docs.py` → documentation checks passed (29 files; 23 original numbered ticket notes). `git diff --check` passed; `npm --prefix frontend audit` → zero vulnerabilities.
 - Vite build measurement: initial JS **463.22 kB → 448.47 kB**, gzip **133.85 kB → 130.61 kB**; terminal JS **18.00 kB** and CSS **2.29 kB** are deferred. These are local bundle sizes, not a claimed production latency improvement.
 - Negative guard verification: temporarily adding a static terminal edge to the generated (ignored) manifest made `check-route-chunks.mjs` exit 1 with “Terminal must not be statically imported by the initial board”; restoring the manifest made the same command pass. No mutation remains.
-- PR: not opened yet.
+- PR: [#36](https://github.com/trippinganymess/Xphire/pull/36) opened against `main`; local implementation commit `3df6a75`. Remote checks/review pending; no merge or deployment performed.
