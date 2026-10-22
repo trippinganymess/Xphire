@@ -2,7 +2,7 @@
 id: "00"
 title: "Design baseline and V2 roadmap"
 blocked_by: []
-status: in_progress
+status: in_review
 branch: "V2/00-design-baseline"
 priority: P0
 created: 2026-10-22
@@ -15,7 +15,7 @@ tags: [v2, implementation-ticket, learning-ticket, concept]
 
 **Branch:** `V2/00-design-baseline` — create when this ticket starts, from updated `main` after blockers merge. Only ticket 00 has a branch at plan publication.
 **Delivers:** An accurate current-state design/architecture record, an approved M3 target, and an executable ticket roadmap.
-**Status:** in progress. A note is a plan, not completed implementation; ready means dependencies permit starting, not that tests already pass.
+**Status:** in review. Documentation acceptance is verified; PR #29 is open. This ticket is not done until merged. Other notes remain plans, not completed implementation.
 
 ## 1. Core Motivation & Problem
 
@@ -95,4 +95,4 @@ Implementing any other ticket, changing production UI, applying migrations, or s
 - `pytest -q`: 2 passed.
 - Mocked Playwright smoke: public board → terminal authentication menu passed; external requests/websockets blocked or mocked. No live accounts, dispatch, ATS requests, paid calls, or SMTP.
 - No runtime code or database migrations changed. Existing untracked user files left untouched.
-- PR: pending publication on `V2/00-design-baseline`. Do not mark done until merged.
+- PR: [#29 — V2/00: Design baseline and implementation roadmap](https://github.com/trippinganymess/Xphire/pull/29), open on `V2/00-design-baseline`. Do not mark done until merged.
