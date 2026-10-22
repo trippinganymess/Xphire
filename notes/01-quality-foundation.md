@@ -2,7 +2,7 @@
 id: "01"
 title: "Reproducible quality and regression foundation"
 blocked_by: []
-status: in_progress
+status: in_review
 branch: "V2/01-quality-foundation"
 priority: P0
 created: 2026-10-22
@@ -15,7 +15,7 @@ tags: [v2, implementation-ticket, learning-ticket, concept]
 
 **Branch:** `V2/01-quality-foundation` — create when this ticket starts, from updated `main` after blockers merge. Only ticket 00 has a branch at plan publication.
 **Delivers:** A clean-checkout development/test setup and CI checks that catch regressions without dispatching jobs or sending mail.
-**Status:** in progress. Offline quality foundation implemented locally; PR and clean-snapshot verification being finalized. Product defects remain assigned to later tickets.
+**Status:** in review. Offline quality foundation verified locally; [PR #30](https://github.com/trippinganymess/Xphire/pull/30) open, not merged. Product defects remain assigned to later tickets.
 
 ## 1. Core Motivation & Problem
 
@@ -104,4 +104,4 @@ Fixing all product bugs in this ticket, upgrading every package indiscriminately
 - Clean Python venv installed all locked packages with `pip install --no-index --find-links /tmp/xphire-wheels --require-hashes -r requirements-dev.txt`, then tests/pip consistency passed. Direct PyPI downloads were exceptionally slow and timed out; a temporary SHA-256-verified wheelhouse was used for the clean-install check. Wheelhouse is not a repository requirement or committed artifact; normal documented install uses PyPI.
 - Clean tracked-file snapshot verification passed at `/tmp/xphire-ticket01-snapshot.81KayJ`: locked npm install, Python tests/lint/pip consistency, documentation checks, Node 24 type/lint/build/browser tests, both audits, and actionlint. Snapshot excludes local `.env` and untracked files.
 - Additional negative checks: strict Python lifecycle XPASS exited 1; a broken documentation link exited 1; an unmocked browser request inside an expected-failure test exited 1 after ensuring safety errors reset Playwright's expected status. All temporary mutations restored.
-- PR: pending opening; remote CI not yet observed. No merge, deploy, live worker execution, account creation, workflow dispatch, or mail delivery performed.
+- PR: [#30](https://github.com/trippinganymess/Xphire/pull/30) opened against `main`; remote CI pending review. No merge, deploy, live worker execution, account creation, workflow dispatch, or mail delivery performed.
