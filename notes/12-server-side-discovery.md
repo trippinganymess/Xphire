@@ -19,7 +19,7 @@ tags: [v2, implementation-ticket, learning-ticket, concept]
 
 ## 1. Core Motivation & Problem
 
-**Why are we doing this?** The board filters only the newest 1,000 fetched rows, and cache filters freshers after an earlier limit. Fetch failures masquerade as no matches.
+**Why are we doing this?** At plan publication, the board filtered only the newest 1,000 fetched rows, and cache filters freshers after an earlier limit. The separately approved [performance slice](performance-discovery.md) removes the board sample cap and adds paginated loading/cache/error handling, but normalized discovery and board/digest predicate parity still require this full ticket.
 
 ## 2. Blocked By
 
@@ -96,5 +96,6 @@ A personalized fit score before 14, loading all rows into the browser, or invent
 ## 10. Execution Log
 
 - 2026-10-22: Ticket scope and dependencies approved; implementation not started except the documentation work in ticket 00.
+- Approved follow-up: [performance-discovery](performance-discovery.md) extracts board-side 50-row paging, legacy server predicates, lazy terminal loading, and public stale-while-revalidate behavior. Its verification is not acceptance evidence for normalized eligibility/lifecycle or digest parity; full ticket 12 remains blocked.
 - PR: not opened yet.
 - Verification: pending for this ticket.

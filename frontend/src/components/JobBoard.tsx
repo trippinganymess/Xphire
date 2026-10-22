@@ -1,26 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { supabase } from '../lib/supabase';
+import { useState } from 'react';
+import { JOB_PAGE_SIZE, useJobPage, type JobFilters } from '../lib/jobCatalog';
 import './JobBoard.css';
-
-interface Job {
-  job_id: string;
-  company: string;
-  title: string;
-  location: string;
-  experience: string;
-  salary: string;
-  source: string;
-  rating: number;
-  scraped_at: string;
-  url: string;
-}
-
-interface Filters {
-  keyword: string;
-  minRating: string;
-  freshersOnly: boolean;
-  source: string;
-}
 
 const RATING_OPTIONS = ['All', '5', '4', '3', '2', '1'];
 
@@ -38,108 +18,24 @@ function formatTimeAgo(dateStr: string): string {
 }
 
 export default function JobBoard() {
-  const [jobs, setJobs] = useState<Job[]>([]);
-  const [filters, setFilters] = useState<Filters>({
-    keyword: '',
-    minRating: 'All',
-    freshersOnly: false,
-    source: 'All',
+  const [{ filters, page }, setQuery] = useState<{ filters: JobFilters; page: number }>({
+    filters: { keyword: '', minRating: 'All', freshersOnly: false, source: 'All' },
+    page: 1,
   });
-  const [loading, setLoading] = useState(false);
-  const isMountedRef = useRef(true);
-  const isFetchingRef = useRef(false);
+  const { data, loading, error, refresh } = useJobPage(filters, page);
+  const jobs = data?.jobs ?? [];
+  const total = data?.total ?? 0;
+  const pages = Math.max(1, Math.ceil(total / JOB_PAGE_SIZE));
 
-  const fetchJobs = useCallback(async () => {
-    if (isFetchingRef.current) return;
-    isFetchingRef.current = true;
-    if (isMountedRef.current) setLoading(true);
+  // A rolling 24-hour catalog can lose its last page during revalidation.
+  // Adjust this component's own query only when the returned count requires it.
+  if (data && !loading && !error && page > pages) {
+    setQuery((current) => ({ ...current, page: pages }));
+  }
 
-    try {
-      // Calculate a cutoff time: only show jobs scraped in the last 24 hours
-      const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-
-      const query = supabase
-        .from('Seen_job')
-        .select('*')
-        .gte('scraped_at', twentyFourHoursAgo)
-        .order('scraped_at', { ascending: false })
-        .limit(1000);
-
-      // Apply filters client‑side because Supabase‑js does not support all filter types natively
-      // The full result set will be filtered after fetching.
-      // We could push down some filters (e.g., source) to the server, but for simplicity we
-      // keep it uniform and filter in JS.
-      const { data, error } = await query;
-
-      if (error) {
-        console.error('Error fetching jobs:', error);
-        return;
-      }
-
-      if (isMountedRef.current) setJobs(data as Job[]);
-    } finally {
-      if (isMountedRef.current) setLoading(false);
-      isFetchingRef.current = false;
-    }
-  }, []);
-
-  useEffect(() => {
-    isMountedRef.current = true;
-    void fetchJobs();
-
-    const interval = setInterval(() => {
-      void fetchJobs();
-    }, 60_000); // polling fallback every 60s
-
-    const realtimeChannel = supabase
-      .channel('seen-job-board-updates')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'Seen_job' },
-        () => {
-          void fetchJobs();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      isMountedRef.current = false;
-      clearInterval(interval);
-      void supabase.removeChannel(realtimeChannel);
-    };
-  }, [fetchJobs]);
-
-  // Apply client‑side filters
-  const filteredJobs = jobs.filter((job) => {
-    // keyword search (case‑insensitive match against company, title, location)
-    if (filters.keyword.trim()) {
-      const kw = filters.keyword.toLowerCase();
-      const matchCompany = job.company?.toLowerCase().includes(kw);
-      const matchTitle = job.title?.toLowerCase().includes(kw);
-      const matchLocation = job.location?.toLowerCase().includes(kw);
-      if (!matchCompany && !matchTitle && !matchLocation) return false;
-    }
-
-    // rating filter
-    if (filters.minRating && filters.minRating !== 'All') {
-      const min = parseInt(filters.minRating, 10);
-      if (isNaN(min)) return true;
-      if ((job.rating ?? 0) < min) return false;
-    }
-
-    // freshers‑only toggle (logic: experience string contains "Fresher" or "0-1")
-    if (filters.freshersOnly) {
-      const exp = job.experience?.toLowerCase() || '';
-      if (!exp.includes('fresher') && !exp.includes('0-1')) return false;
-    }
-
-    // source filter (still respected if source state is manipulated externally)
-    if (filters.source && filters.source !== 'All') {
-      if (job.source?.toLowerCase() !== filters.source.toLowerCase()) return false;
-    }
-
-    return true;
-  });
+  function updateFilters(update: Partial<JobFilters>) {
+    setQuery((current) => ({ filters: { ...current.filters, ...update }, page: 1 }));
+  }
 
   function renderFilterBar() {
     return (
@@ -149,13 +45,15 @@ export default function JobBoard() {
           className="job-board-filter-input"
           placeholder="Search keyword ..."
           value={filters.keyword}
-          onChange={(e) => setFilters((f) => ({ ...f, keyword: e.target.value }))}
+          aria-label="Search jobs"
+          onChange={(e) => updateFilters({ keyword: e.target.value })}
         />
 
         <select
           className="job-board-filter-select"
           value={filters.minRating}
-          onChange={(e) => setFilters((f) => ({ ...f, minRating: e.target.value }))}
+          aria-label="Minimum rating"
+          onChange={(e) => updateFilters({ minRating: e.target.value })}
         >
           {RATING_OPTIONS.map((opt) => (
             <option key={opt} value={opt}>
@@ -168,7 +66,7 @@ export default function JobBoard() {
           <input
             type="checkbox"
             checked={filters.freshersOnly}
-            onChange={(e) => setFilters((f) => ({ ...f, freshersOnly: e.target.checked }))}
+            onChange={(e) => updateFilters({ freshersOnly: e.target.checked })}
           />
           Freshers Only
         </label>
@@ -176,27 +74,46 @@ export default function JobBoard() {
     );
   }
 
-  if (loading && jobs.length === 0) {
+  function renderPagination() {
     return (
-      <div className="job-board-empty">
-        <p>System scanning for new jobs...</p>
-      </div>
+      <nav className="job-board-pagination" aria-label="Job pages">
+        <button type="button" disabled={page === 1 || loading}
+          onClick={() => setQuery((current) => ({ ...current, page: current.page - 1 }))}>
+          Previous page
+        </button>
+        <span role="status">{data ? `Page ${page} of ${pages} · ${total} jobs` : `Page ${page}`}</span>
+        <button type="button" disabled={page >= pages || loading || !data}
+          onClick={() => setQuery((current) => ({ ...current, page: current.page + 1 }))}>
+          Next page
+        </button>
+      </nav>
     );
   }
 
   return (
-    <div className="job-board">
+    <div className="job-board" aria-busy={loading}>
       <h2 className="job-board-heading">Latest Opportunities</h2>
       {renderFilterBar()}
+      {error && (
+        <div className="job-board-feedback" role="alert">
+          <p>{data ? 'Refresh failed. Showing previously loaded results.' : error}</p>
+          <button type="button" onClick={refresh}>Retry</button>
+          {page > 1 && <button type="button"
+            onClick={() => setQuery((current) => ({ ...current, page: 1 }))}>First page</button>}
+        </div>
+      )}
+      {loading && !data && <div className="job-board-empty"><p>System scanning for new jobs...</p></div>}
+      {loading && data && <p className="job-board-feedback">Refreshing jobs...</p>}
+      {(data || page > 1) && renderPagination()}
 
-      {filteredJobs.length === 0 && !loading && (
+      {data && jobs.length === 0 && !loading && !error && (
         <div className="job-board-empty">
           <p>No jobs match your filters. Try different criteria.</p>
         </div>
       )}
 
       <div className="job-board-grid">
-        {filteredJobs.map((job) => {
+        {jobs.map((job) => {
           const stars = '★'.repeat(Math.max(0, job.rating ?? 0));
           const posted = job.scraped_at ? formatTimeAgo(job.scraped_at) : '—';
           return (

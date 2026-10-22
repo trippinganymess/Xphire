@@ -152,6 +152,17 @@ This is the **application's expected schema**, not a verified inventory of the d
 
 The V2 objective is a **verified fresher shortlist**. An employer's reputation, the time Xphire first saw a listing, and a title containing “junior” do not independently prove candidate eligibility.
 
+### 6.1 Public discovery performance follow-up
+
+The historical baseline above remains unchanged as a record of commit `587df22`. The user subsequently approved a [separate performance slice](notes/performance-discovery.md), implemented on `V2/performance-discovery` pending PR review:
+
+- The board selects only card fields and fetches 50-row pages over the entire last-24-hour window, with a filtered count and `scraped_at`/`job_id` tie-breaking. The former 1,000-row cap and browser-only filtering are removed; legacy fresher semantics remain until ticket 08.
+- Terminal JS/CSS load on demand at `#/terminal`; shared navigation/auth behavior remains.
+- Public query pages have a 30-second freshness window and bounded five-minute stale retention in memory. The active visible query revalidates in the background; fresh returns reuse cached data, errors expose retry, and stale refresh preserves useful results. No private/auth responses are cached.
+- Bulk minute polling and realtime bulk reloads are replaced by active-page revalidation. Rolling offset pages are not a transactionally frozen database snapshot.
+
+This is a deliberate loading-performance exception to the sequencing of full ticket 12. It does not claim M3 migration, verified eligibility/lifecycle, normalized discovery semantics, or digest parity. Existing shell styling remains until ticket 04; new feedback/navigation uses semantic tokens, wrapping controls, and keyboard focus without introducing a third palette.
+
 ## 7. V2 visual direction: Material Design 3
 
 ### 7.1 Decision and consistency rules

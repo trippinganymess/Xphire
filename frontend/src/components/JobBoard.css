@@ -21,6 +21,40 @@
   font-size: 15px;
 }
 
+/* Pagination stays in the existing shell until ticket 04's M3 migration. */
+.job-board-pagination,
+.job-board-feedback {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+  margin-block: 16px;
+  color: var(--ink-black);
+  font-family: system-ui, sans-serif;
+}
+
+.job-board-pagination button,
+.job-board-feedback button {
+  padding: 8px 16px;
+  border: var(--sketch-border-sm);
+  border-radius: 8px;
+  background: var(--paper-surface);
+  color: var(--ink-black);
+  font: inherit;
+  cursor: pointer;
+}
+
+.job-board-pagination button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.job-board-pagination button:focus-visible,
+.job-board-feedback button:focus-visible {
+  outline: 2px solid var(--ink-black);
+  outline-offset: 3px;
+}
+
 /* ── Filter Bar ── */
 .job-board-filter-bar {
   display: flex;
