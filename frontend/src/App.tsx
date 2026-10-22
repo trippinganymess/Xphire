@@ -15,6 +15,19 @@ function AppLayout() {
   const isTerminalRoute = location.pathname === '/terminal';
 
   useEffect(() => {
+    async function handleSupabaseUser(authUser: import('@supabase/supabase-js').User) {
+      try {
+        const profile = await fetchUserProfile(authUser.id);
+        setUser({
+          name: profile?.name || authUser.user_metadata?.name || 'User',
+          email: authUser.email || '',
+          avatarUrl: profile?.avatar_url || authUser.user_metadata?.avatar_url,
+        });
+      } catch (error) {
+        console.error('Error handling user:', error);
+      }
+    }
+
     // Check active sessions and sets the user
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
@@ -35,22 +48,6 @@ function AppLayout() {
 
     return () => subscription.unsubscribe();
   }, []);
-
-  const handleSupabaseUser = async (authUser: any) => {
-    try {
-      const profile = await fetchUserProfile(authUser.id);
-      
-      const session: UserSession = {
-        name: profile?.name || authUser.user_metadata?.name || 'User',
-        email: authUser.email,
-        avatarUrl: profile?.avatar_url || authUser.user_metadata?.avatar_url,
-      };
-      
-      setUser(session);
-    } catch (error) {
-      console.error('Error handling user:', error);
-    }
-  };
 
   const handleLogout = () => {
     setUser(null);

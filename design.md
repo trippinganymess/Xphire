@@ -309,15 +309,18 @@ For each UI ticket, review:
 
 ## 11. Verification and evidence
 
-Use package-level commands rather than the root build wrapper, which runs `npm install` and can rewrite the lockfile:
+Quality-foundation commands now delegate without reinstalling packages. Use the supported Python 3.11/Node 24 setup in [docs/quality.md](docs/quality.md):
 
 ```bash
-npm --prefix frontend run build
-npm --prefix frontend run lint
-pytest -q
+npm run typecheck
+npm run build
+npm run lint
+npm test
+python -m pytest -q
+python scripts/check_docs.py
 ```
 
-`pytest` availability depends on the interpreter; the local `.venv` did not include it during the review. Add an explicit development test setup in the quality ticket. Do not run scraping/email workers with real credentials as tests.
+The explicit pinned development setup was added in ticket 01; the historical observation below remains a baseline, not the current check result. Do not run scraping/email workers with real credentials as tests.
 
 The review baseline had a passing production build, two passing Python tests, five frontend lint warnings, and two high-severity dependency-audit entries. These are observations, not ongoing guarantees. The current tests do not cover eligibility, lifecycle, RLS, or reliable dispatch/delivery.
 

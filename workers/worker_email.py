@@ -16,19 +16,13 @@ Designed to run entirely on GitHub Actions (ubuntu-latest).
 
 import os
 import asyncio
-import random
-import pandas as pd
 from typing import List, Dict, Any
 
 from utils.ai_reviewer import enrich_jobs
 from utils.deduper import Deduper
 from utils.emailer import build_html_email, send_email
 from utils.scraping import (
-    build_google_search_term,
     create_stealth_client,
-    df_to_job_dicts,
-    filter_mass_recruiters,
-    human_delay,
     parse_proxy_list,
     scrape_jobspy,
     scrape_ats,
@@ -112,7 +106,7 @@ async def main():
         return
 
     print("=" * 60)
-    print(f"  Xphire Unified Pipeline")
+    print("  Xphire Unified Pipeline")
     print(f"  Title        : {job_title}")
     print(f"  Recipient    : {recipient_email}")
     print(f"  Freshers Only: {freshers_only}")

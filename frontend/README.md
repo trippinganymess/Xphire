@@ -1,32 +1,18 @@
-# React + TypeScript + Vite
+# Xphire frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+React/TypeScript SPA built with Vite. Use **Node.js 24 LTS**.
 
-Currently, two official plugins are available:
-
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+npm ci --ignore-scripts
+npx playwright install chromium
+npm run typecheck
+npm run lint
+npm run build
+npm test
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+`npm test` starts an isolated local Vite server with fake Supabase credentials and mocked HTTP/auth/catalog/workflow/realtime effects. It does not reuse a manually started server or create real accounts. `node verify_ui.cjs` delegates to these asserting tests. See [quality documentation](../docs/quality.md) for fixture extension points, expected product defects, CI, audits, and evidence locations.
+
+For actual development, copy `.env.example` to `.env` and provide the public Supabase URL/anon key, then run `npm run dev`. Do not use service-role keys in browser configuration. Live development and offline tests are separate activities.
+
+The application currently retains its sketch/terminal UI; V2 Material Design 3 is governed by [design.md](../design.md) and shipped through later tickets, not this quality foundation.
