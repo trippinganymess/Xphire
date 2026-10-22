@@ -21,7 +21,7 @@ export interface JobFilters {
   source: string;
 }
 
-export const JOB_PAGE_SIZE = 50;
+export const JOB_PAGE_SIZE = 51;
 const JOB_COLUMNS = 'job_id,company,title,location,experience,salary,source,rating,scraped_at,url';
 
 interface JobPage {
