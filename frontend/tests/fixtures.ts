@@ -21,10 +21,66 @@ export function job(overrides: Record<string, unknown> = {}) {
   };
 }
 
+function splitTerms(value: string): string[] {
+  const terms: string[] = [];
+  let depth = 0;
+  let quoted = false;
+  let escaped = false;
+  let start = 0;
+  for (let i = 0; i < value.length; i++) {
+    const char = value[i];
+    if (escaped) { escaped = false; continue; }
+    if (char === '\\') { escaped = true; continue; }
+    if (char === '"') quoted = !quoted;
+    if (quoted) continue;
+    if (char === '(') depth++;
+    if (char === ')') depth--;
+    if (char === ',' && depth === 0) {
+      terms.push(value.slice(start, i));
+      start = i + 1;
+    }
+  }
+  terms.push(value.slice(start));
+  return terms;
+}
+
+function matchesPattern(value: unknown, pattern: string): boolean {
+  let expression = '^';
+  let escaped = false;
+  for (const char of pattern) {
+    if (!escaped && char === '\\') { escaped = true; continue; }
+    if (!escaped && (char === '%' || char === '*')) expression += '.*';
+    else if (!escaped && char === '_') expression += '.';
+    else expression += char.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    escaped = false;
+  }
+  return new RegExp(`${expression}$`, 'i').test(String(value ?? ''));
+}
+
+function matchesTerm(row: ReturnType<typeof job>, term: string): boolean {
+  if (term.startsWith('and(') || term.startsWith('or(')) {
+    const terms = splitTerms(term.slice(term.indexOf('(') + 1, -1));
+    return term.startsWith('and(') ? terms.every((item) => matchesTerm(row, item))
+      : terms.some((item) => matchesTerm(row, item));
+  }
+  const match = /^([a-z_]+)\.(ilike|imatch|gte|lte|eq)\.(.*)$/.exec(term);
+  if (!match) throw new Error(`Unsupported mock predicate: ${term}`);
+  const [, field, operator, encoded] = match;
+  const value = encoded.startsWith('"') ? JSON.parse(encoded) as string : encoded;
+  const actual = (row as Record<string, unknown>)[field];
+  if (operator === 'ilike') return matchesPattern(actual, value);
+  if (operator === 'imatch') return actual != null && new RegExp(value, 'i').test(String(actual));
+  if (actual == null) return false;
+  if (operator === 'gte') return field === 'rating' ? Number(actual) >= Number(value) : String(actual) >= value;
+  if (operator === 'lte') return String(actual) <= value;
+  return String(actual) === value;
+}
+
 export interface MockBackend {
   jobs: ReturnType<typeof job>[];
   catalogStatus: number;
   catalogDelay: boolean;
+  catalogGate: Promise<void> | null;
   requests: { method: string; path: string; body: unknown; query: string }[];
 }
 
@@ -33,7 +89,7 @@ export const test = base.extend<{ backend: MockBackend }>({
     const backend: MockBackend = {
       jobs: [job(), job({ job_id: 'senior', title: 'Senior Analyst', company: 'Beta',
         location: 'Mumbai, India', experience: '5+ Yrs', rating: 2 })],
-      catalogStatus: 200, catalogDelay: false, requests: [],
+      catalogStatus: 200, catalogDelay: false, catalogGate: null, requests: [],
     };
     const unexpected: string[] = [];
     const errors: string[] = [];
@@ -47,6 +103,8 @@ export const test = base.extend<{ backend: MockBackend }>({
       if (text.includes('Failed to load resource: net::ERR_FAILED')) return;
       // Mock HTTP rejection is intentionally exercised by the dispatch test.
       if (text.includes('Failed to load resource: the server responded with a status of 403')) return;
+      // Catalog failure/retry tests deliberately script HTTP errors.
+      if (backend.catalogStatus !== 200 && text.includes(`Failed to load resource: the server responded with a status of ${backend.catalogStatus}`)) return;
       errors.push(text);
     });
     await page.clock.install({ time: new Date(NOW) });
@@ -64,9 +122,40 @@ export const test = base.extend<{ backend: MockBackend }>({
       const body = request.postData() ? request.postDataJSON() : null;
       backend.requests.push({ method: request.method(), path: url.pathname, body, query: url.search });
       if (url.pathname === '/rest/v1/Seen_job' && request.method() === 'GET') {
+        let rows = [...backend.jobs];
+        for (const [key, value] of url.searchParams) {
+          if (key === 'or') rows = rows.filter((row) => matchesTerm(row, `or${value}`));
+          else if (!['select', 'order', 'offset', 'limit'].includes(key)) {
+            rows = rows.filter((row) => matchesTerm(row, `${key}.${value}`));
+          }
+        }
+        const order = url.searchParams.get('order');
+        if (order) {
+          const fields = order.split(',');
+          rows.sort((a, b) => {
+            for (const field of fields) {
+              const [name, direction] = field.split('.');
+              const left = String((a as Record<string, unknown>)[name] ?? '');
+              const right = String((b as Record<string, unknown>)[name] ?? '');
+              const comparison = left < right ? -1 : left > right ? 1 : 0;
+              if (comparison) return direction === 'desc' ? -comparison : comparison;
+            }
+            return 0;
+          });
+        }
+        const total = rows.length;
+        const offset = Number(url.searchParams.get('offset') ?? 0);
+        const limit = Number(url.searchParams.get('limit') ?? 1000);
+        rows = rows.slice(offset, offset + limit);
+        const status = backend.catalogStatus;
+        const gate = backend.catalogGate;
         if (backend.catalogDelay) await new Promise((resolve) => setTimeout(resolve, 300));
-        return route.fulfill({ status: backend.catalogStatus, json: backend.catalogStatus === 200
-          ? backend.jobs : { message: 'Offline catalog unavailable' } });
+        if (gate) await gate;
+        return route.fulfill({ status, headers: {
+          'content-range': `${offset}-${offset + rows.length - 1}/${total}`,
+          'access-control-expose-headers': 'content-range',
+        },
+          json: status === 200 ? rows : { message: 'Offline catalog unavailable' } });
       }
       if (url.pathname === '/rest/v1/users' && request.method() === 'GET') {
         return route.fulfill({ json: { id: session.user.id, name: 'Test Candidate',

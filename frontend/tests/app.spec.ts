@@ -7,7 +7,7 @@ test('public board uses mocked catalog, query window, filters and safe apply lin
   await expect(page.getByText('1h ago').first()).toBeVisible();
   const request = backend.requests.find((r) => r.path === '/rest/v1/Seen_job');
   expect(request?.query).toContain('scraped_at=gte.2026-10-21');
-  expect(request?.query).toContain('limit=1000');
+  expect(request?.query).toContain('limit=50');
   const apply = page.getByRole('link', { name: 'APPLY NOW' }).first();
   await expect(apply).toHaveAttribute('href', 'https://jobs.example.test/entry');
   await expect(apply).toHaveAttribute('rel', 'noopener noreferrer');
@@ -76,6 +76,7 @@ for (const experience of ['0-2 Yrs', 'Internship']) {
     await page.goto('/#/');
     await expect(page.getByRole('article')).toHaveCount(1);
     await page.getByLabel('Freshers Only').check();
+    await expect(page.locator('.job-board')).toHaveAttribute('aria-busy', 'false');
     const count = await page.getByRole('article').count();
     test.fail(true, 'Ticket 08: board only checks Fresher/0-1 substrings');
     expect(count).toBe(1);
@@ -87,6 +88,7 @@ test('ticket 08: fresher filter excludes 10-12 Yrs', async ({ page, backend }) =
   await page.goto('/#/');
   await expect(page.getByRole('article')).toHaveCount(1);
   await page.getByLabel('Freshers Only').check();
+  await expect(page.locator('.job-board')).toHaveAttribute('aria-busy', 'false');
   const count = await page.getByRole('article').count();
   test.fail(true, 'Ticket 08: 10-12 contains 0-1');
   expect(count).toBe(0);

@@ -1,11 +1,13 @@
-import { useState, useEffect } from 'react';
+import { lazy, Suspense, useState, useEffect } from 'react';
 import { HashRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import SketchHeader, { type SystemStatus } from './components/SketchHeader';
-import SketchTerminal, { type UserSession } from './components/SketchTerminal';
+import type { UserSession } from './components/SketchTerminal';
 import JobBoard from './components/JobBoard';
 import { supabase } from './lib/supabase';
 import { fetchUserProfile } from './lib/userService';
 import './App.css';
+
+const SketchTerminal = lazy(() => import('./components/SketchTerminal'));
 
 // A wrapper component that passes the current route down to the header
 function AppLayout() {
@@ -73,11 +75,13 @@ function AppLayout() {
           <Route 
             path="/terminal" 
             element={
-              <SketchTerminal
-                user={user}
-                onLogout={handleLogout}
-                onStatusChange={setSystemStatus}
-              />
+              <Suspense fallback={<p role="status">Loading terminal...</p>}>
+                <SketchTerminal
+                  user={user}
+                  onLogout={handleLogout}
+                  onStatusChange={setSystemStatus}
+                />
+              </Suspense>
             } 
           />
         </Routes>

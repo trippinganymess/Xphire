@@ -51,6 +51,10 @@ Approved: 2026-10-22. Goal: a **verified fresher shortlist**, with **Material De
 - **03 — M3 design system:** ready independently; may start after 00 merges when chosen.
 - Secure dispatch is the first product/security fix after quality setup. Numbering does not require delaying security for a complete visual migration.
 
+## Performance-first slice (approved follow-up)
+
+The user approved [public discovery performance](performance-discovery.md) as a separately testable slice on `V2/performance-discovery`, based on merged ticket 01. It delivers 50-job server-filtered pages over the full last-24-hour window, lazy terminal routing, and brief in-memory public-page caching/background revalidation without waiting for the entire M3/eligibility chain. This exception does **not** mark ticket 12 or its blockers complete; normalized eligibility/lifecycle and board/digest parity remain in their original tickets.
+
 ## Release slices
 
 - **Foundation:** 00–07 establish documentation, reproducible checks, secure requests, M3 foundations, normalized catalog, and full evidence.
