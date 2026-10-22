@@ -95,6 +95,8 @@ export default function SketchTerminal({
   // Initial welcome greeting
   useEffect(() => {
     if (!user) {
+      // Reviewed legacy session-driven terminal reset; replace with form state in ticket 05.
+      // oxlint-disable-next-line react/set-state-in-effect
       setLines([
         { id: '1', type: 'header', text: '==================================================' },
         { id: '2', type: 'header', text: '      XPHIRE AI JOB SCOUT - TERMINAL v2.4       ' },
@@ -208,7 +210,7 @@ export default function SketchTerminal({
           const ctx = (error as any).context;
           const body = typeof ctx?.json === 'function' ? await ctx.json() : null;
           detail = body?.error || body?.message || error.message;
-        } catch (_) {}
+        } catch { /* Keep the SDK error message when its body is unreadable. */ }
         addLine({ type: 'error', text: `[${timestamp()}] >> [ERROR] Failed to dispatch workflow: ${detail}` });
         setWorkflowStep('IDLE');
         onStatusChange('online');
@@ -285,7 +287,7 @@ export default function SketchTerminal({
           const ctx = (error as any).context;
           const body = typeof ctx?.json === 'function' ? await ctx.json() : null;
           detail = body?.error || body?.message || error.message;
-        } catch (_) {}
+        } catch { /* Keep the SDK error message when its body is unreadable. */ }
         addLine({ type: 'error', text: `[${timestamp()}] >> [ERROR] Failed to schedule: ${detail}` });
       } else {
         const istSlots: Record<number, string> = { 0: '5:30 AM', 6: '11:30 AM', 12: '5:30 PM', 18: '11:30 PM' };
@@ -320,7 +322,7 @@ export default function SketchTerminal({
           const ctx = (error as any).context;
           const body = typeof ctx?.json === 'function' ? await ctx.json() : null;
           detail = body?.error || body?.message || error.message;
-        } catch (_) {}
+        } catch { /* Keep the SDK error message when its body is unreadable. */ }
         addLine({ type: 'error', text: `[${timestamp()}] >> [ERROR] ${detail}` });
       } else {
         addLine({ type: 'success', text: `✓ Recurring email subscription cancelled.` });

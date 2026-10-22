@@ -10,7 +10,10 @@ import os
 import re
 import random
 import asyncio
-from typing import Dict, List, Any, Optional as _Optional
+from typing import TYPE_CHECKING, Dict, List, Any, Optional as _Optional
+
+if TYPE_CHECKING:
+    from utils.deduper import Deduper
 
 import httpx
 import pandas as pd

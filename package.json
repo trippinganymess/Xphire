@@ -2,6 +2,10 @@
   "name": "xphire-root",
   "private": true,
   "scripts": {
-    "build": "cd frontend && npm install && npm run build"
+    "build": "npm --prefix frontend run build",
+    "typecheck": "npm --prefix frontend run typecheck",
+    "lint": "npm --prefix frontend run lint",
+    "test": "npm --prefix frontend test",
+    "docs:check": "python3 scripts/check_docs.py"
   }
 }

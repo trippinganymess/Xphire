@@ -1,0 +1,19 @@
+# Python 3.11 development + runtime environment; do not install over a live worker.
+# Compile (uv 0.11.21):
+#   uv pip compile requirements-dev.in --python-version 3.11 --universal --generate-hashes -o requirements-dev.txt
+# Clean install/check (Python 3.11):
+#   python3.11 -m venv .venv-quality
+#   .venv-quality/bin/python -m pip install --require-hashes -r requirements-dev.txt
+#   .venv-quality/bin/python -m pytest
+#   .venv-quality/bin/python -m ruff check
+#   .venv-quality/bin/python -m pip_audit --disable-pip -r requirements-dev.txt
+-r requirements.txt
+pytest
+pytest-asyncio
+pip-audit
+ruff
+time-machine
+# Include installer tooling in the audited, pinned environment.
+pip
+setuptools
+wheel

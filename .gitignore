@@ -8,3 +8,9 @@ frontend/dist/
 review.md
 supabase/.temp/
 .aider*
+.venv/
+.venv-quality/
+.pytest_cache/
+.ruff_cache/
+frontend/playwright-report/
+frontend/test-results/

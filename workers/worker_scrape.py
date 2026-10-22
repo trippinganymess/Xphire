@@ -7,7 +7,6 @@ Runs every 30 minutes via GitHub Actions.
 import asyncio
 import os
 import sys
-import time
 from typing import Dict, List, Any
 
 import httpx

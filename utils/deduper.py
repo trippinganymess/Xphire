@@ -69,7 +69,7 @@ class Deduper:
         new_jobs = [job for job in scraped_jobs if job["job_id"] not in existing_ids]
 
         print("-" * 60)
-        print(f"[DEDUPLICATION SUMMARY]")
+        print("[DEDUPLICATION SUMMARY]")
         print(f"  -> Total Extracted (Set A): {len(scraped_jobs)}")
         print(f"  -> Found in Database (Set B): {len(existing_ids)}")
         print(f"  -> New Jobs to Sync (A - B): {len(new_jobs)}")
@@ -145,7 +145,7 @@ class Deduper:
                 elif resp.status_code == 400 and "PGRST204" in resp.text:
                     # Table exists but extra columns (company, title, etc.) aren't created yet.
                     # Fallback to minimal payload (job_id only) so deduplication vault still works!
-                    print(f"  [SUPABASE] Extra columns missing in 'Seen_job' table. Falling back to minimal job_id schema...")
+                    print("  [SUPABASE] Extra columns missing in 'Seen_job' table. Falling back to minimal job_id schema...")
                     min_headers = {**self.write_headers, "Prefer": "resolution=ignore-duplicates"}
                     min_payload = [{"job_id": job["job_id"]} for job in chunk]
                     min_resp = await client.post(url, headers=min_headers, json=min_payload, timeout=10.0)

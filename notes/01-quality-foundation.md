@@ -2,7 +2,7 @@
 id: "01"
 title: "Reproducible quality and regression foundation"
 blocked_by: []
-status: ready
+status: in_review
 branch: "V2/01-quality-foundation"
 priority: P0
 created: 2026-10-22
@@ -15,7 +15,7 @@ tags: [v2, implementation-ticket, learning-ticket, concept]
 
 **Branch:** `V2/01-quality-foundation` — create when this ticket starts, from updated `main` after blockers merge. Only ticket 00 has a branch at plan publication.
 **Delivers:** A clean-checkout development/test setup and CI checks that catch regressions without dispatching jobs or sending mail.
-**Status:** ready. A note is a plan, not completed implementation; ready means dependencies permit starting, not that tests already pass.
+**Status:** in review. Offline quality foundation verified locally; [PR #30](https://github.com/trippinganymess/Xphire/pull/30) open, not merged. Product defects remain assigned to later tickets.
 
 ## 1. Core Motivation & Problem
 
@@ -71,10 +71,10 @@ Follow [design.md](../design.md). Keep current-state documentation distinct from
 
 ## 7. Acceptance Criteria
 
-- [ ] Documented clean-checkout commands install development dependencies and run tests under the supported Python/Node versions.
-- [ ] Tests use no real accounts, API credentials, ATS traffic, paid model calls, SMTP delivery, or workflow dispatch.
-- [ ] Existing tests pass and fixtures can exercise the known fresher/location/lifecycle cases; unresolved defects are not silently blessed as expected behavior.
-- [ ] PR CI reports build/type, lint, and test failures; existing warnings/advisories have explicit disposition and no new unexplained failures.
+- [x] Documented clean-checkout commands install development dependencies and run tests under the supported Python/Node versions.
+- [x] Tests use no real accounts, API credentials, ATS traffic, paid model calls, SMTP delivery, or workflow dispatch.
+- [x] Existing tests pass and fixtures can exercise the known fresher/location/lifecycle cases; unresolved defects are not silently blessed as expected behavior.
+- [x] PR CI reports build/type, lint, and test failures; existing warnings/advisories have explicit disposition and no new unexplained failures.
 
 ## 8. Verification Plan
 
@@ -91,5 +91,17 @@ Fixing all product bugs in this ticket, upgrading every package indiscriminately
 ## 10. Execution Log
 
 - 2026-10-22: Ticket scope and dependencies approved; implementation not started except the documentation work in ticket 00.
-- PR: not opened yet.
-- Verification: pending for this ticket.
+- 2026-10-22: Started `V2/01-quality-foundation` from fetched `origin/main` (`587df22`). User approved carrying ticket 00's two documentation commits because PR #29 remains unmerged; this PR temporarily includes that baseline.
+- Added hash-locked Python 3.11 development/runtime dependencies; real dependency imports replace global import stubs. Fail-closed network/credentials fixtures script Supabase, four ATS formats, JobSpy, Gemini, UTC/monotonic time, and SMTP.
+- Added mocked Chromium board/auth/terminal/dispatch checks with an isolated strict-port server, fake credentials overriding local `.env`, intercepted realtime, and no real signup/apply/dispatch. Replaced unsafe `verify_ui.cjs` with test delegation.
+- Added PR-only Python/frontend/documentation jobs, Node 24 deployment alignment, strict frontend warning handling, E9/F Python lint with no blanket ignores, and root commands that never install dependencies.
+- Dependency review: npm's two affected packages patched narrowly (Vite 8.2.2 → 8.2.4; source-map-js 1.2.1 → 1.2.2); unrelated locked versions retained. Python lock audit and npm audit report no known vulnerabilities. Exact advisory IDs, warning disposition, limitations and setup are in [docs/quality.md](../docs/quality.md).
+- Local Python 3.11.16 verification: `python -m pytest -q` → **36 passed, 10 xfailed**; `python -m ruff check .` → all checks passed; `python -m pip check` → no broken requirements; `python -m pip_audit --disable-pip -r requirements-dev.txt` → no known vulnerabilities.
+- Local Node 24.22.1 verification (selected via `npx --package=node@24 -- ...` because default local Node is 26): `npm ci --ignore-scripts`, `npm run typecheck`, `npm run lint`, `npm run build`, `npm test`, `npm audit`. Browser result: **4 ordinary passes + 4 expected failures** (Playwright reports eight passed overall). Build succeeded; no frontend lint warnings. Existing terminal duplicate-log-key console diagnostic is reviewed/deferred to ticket 05.
+- Expected failures assert desired fresher, location/role, rediscovery/lifecycle semantics and identify tickets 08/09/10/12. Python assertion-only strict xfails and browser unexpected passes fail CI; they are not product acceptance evidence.
+- Failure propagation checked by temporarily changing retry assertion `7.0` → `-1.0` and board count `2` → `99`: both commands exited 1. Temporarily making the known `10-12 Yrs` bug assertion pass also exited 1 (“Expected to fail, but passed”). All mutations restored.
+- `actionlint` 1.7.12 validated new PR workflow and modified deploy workflow; `python scripts/check_docs.py` validated documentation links/ticket metadata; `git diff --check` passed.
+- Clean Python venv installed all locked packages with `pip install --no-index --find-links /tmp/xphire-wheels --require-hashes -r requirements-dev.txt`, then tests/pip consistency passed. Direct PyPI downloads were exceptionally slow and timed out; a temporary SHA-256-verified wheelhouse was used for the clean-install check. Wheelhouse is not a repository requirement or committed artifact; normal documented install uses PyPI.
+- Clean tracked-file snapshot verification passed at `/tmp/xphire-ticket01-snapshot.81KayJ`: locked npm install, Python tests/lint/pip consistency, documentation checks, Node 24 type/lint/build/browser tests, both audits, and actionlint. Snapshot excludes local `.env` and untracked files.
+- Additional negative checks: strict Python lifecycle XPASS exited 1; a broken documentation link exited 1; an unmocked browser request inside an expected-failure test exited 1 after ensuring safety errors reset Playwright's expected status. All temporary mutations restored.
+- PR: [#30](https://github.com/trippinganymess/Xphire/pull/30) opened against `main`; remote CI pending review. No merge, deploy, live worker execution, account creation, workflow dispatch, or mail delivery performed.

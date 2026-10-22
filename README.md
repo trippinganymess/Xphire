@@ -7,6 +7,24 @@
 
 ---
 
+## Development and regression checks
+
+Use **Python 3.11** and **Node.js 24 LTS**. See [Quality and offline development](docs/quality.md) for clean-checkout installation, locked dependencies, mocked browser/Python tests, PR CI, and reviewed warnings/advisories. Tests do not create accounts, scrape live ATS boards, call paid models, dispatch workflows, or send mail.
+
+```bash
+python3.11 -m venv .venv-quality
+source .venv-quality/bin/activate
+python -m pip install --require-hashes -r requirements-dev.txt
+npm --prefix frontend ci --ignore-scripts
+(cd frontend && npx playwright install chromium)
+python -m ruff check .
+python -m pytest -q
+python scripts/check_docs.py
+npm run typecheck && npm run lint && npm run build && npm test
+```
+
+---
+
 ##  Features
 
 - **850+ ATS & Portal Scraping**: Direct API integrations with Greenhouse, Lever, Ashby, and SmartRecruiters alongside Google Jobs, LinkedIn, and Indeed.

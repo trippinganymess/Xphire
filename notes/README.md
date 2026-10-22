@@ -21,7 +21,7 @@ Approved: 2026-10-22. Goal: a **verified fresher shortlist**, with **Material De
 | Ticket | Priority | Blocked by | Initial status | Branch when started |
 |---|---|---|---|---|
 | [00 — Design baseline and V2 roadmap](00-design-baseline.md) | P0 | None | in review | `V2/00-design-baseline` |
-| [01 — Reproducible quality and regression foundation](01-quality-foundation.md) | P0 | None | ready | `V2/01-quality-foundation` |
+| [01 — Reproducible quality and regression foundation](01-quality-foundation.md) | P0 | None | in review | `V2/01-quality-foundation` |
 | [02 — Authenticated, bounded workflow dispatch](02-secure-dispatch.md) | P0 | [01](01-quality-foundation.md) | blocked | `V2/02-secure-dispatch` |
 | [03 — Material Design 3 tokens and accessible primitives](03-m3-design-system.md) | P1 | None | ready | `V2/03-m3-design-system` |
 | [04 — M3 shared shell and responsive board](04-m3-shell-and-board.md) | P1 | [03](03-m3-design-system.md) | blocked | `V2/04-m3-shell-and-board` |
@@ -47,7 +47,7 @@ Approved: 2026-10-22. Goal: a **verified fresher shortlist**, with **Material De
 ## Starting frontier
 
 - **00 — Design baseline:** verified documentation; [PR #29](https://github.com/trippinganymess/Xphire/pull/29) open for review, not merged; no runtime changes.
-- **01 — Quality foundation:** ready; recommended first implementation ticket so subsequent changes have reliable regression checks.
+- **01 — Quality foundation:** locally verified; [PR #30](https://github.com/trippinganymess/Xphire/pull/30) open for review on `V2/01-quality-foundation`; [verification and reviewed limitations](01-quality-foundation.md#10-execution-log). Does not unblock downstream tickets until merged.
 - **03 — M3 design system:** ready independently; may start after 00 merges when chosen.
 - Secure dispatch is the first product/security fix after quality setup. Numbering does not require delaying security for a complete visual migration.
 
