@@ -8,6 +8,9 @@ on:
     - cron: '0 0,6,12,18 * * *'
   workflow_dispatch:  # Manual trigger for testing
 
+permissions:
+  contents: read
+
 jobs:
   scheduled-dispatch:
     runs-on: ubuntu-latest
