@@ -17,7 +17,7 @@ function AppLayout() {
   const isTerminalRoute = location.pathname === '/terminal';
 
   useEffect(() => {
-    async function handleSupabaseUser(authUser: import('@supabase/supabase-js').User) {
+    async function handleSupabaseUser(authUser: import('@supabase/auth-js').User) {
       try {
         const profile = await fetchUserProfile(authUser.id);
         setUser({

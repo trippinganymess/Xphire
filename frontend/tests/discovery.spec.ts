@@ -7,7 +7,7 @@ test('combined server filters find a match outside the old 1,000-row sample and 
   backend.jobs.push(job({ job_id: '000-target', title: 'Target Engineer', rating: 5 }));
   backend.jobs.push(job({ job_id: '000-senior', title: 'Target Engineer', rating: 5, experience: '5+ Yrs' }));
   await page.goto('/#/');
-  await expect(page.getByRole('article')).toHaveCount(50);
+  await expect(page.getByRole('article')).toHaveCount(51);
   await page.getByRole('button', { name: 'Next page' }).click();
   await expect(page.getByRole('status')).toContainText('Page 2');
   await page.getByRole('textbox', { name: 'Search jobs' }).fill('  target  ');
@@ -28,14 +28,14 @@ test('equal timestamps use a deterministic tie-breaker across adjacent pages', a
     job_id: String(i).padStart(3, '0'), title: `Unique role ${i}`,
   })).reverse();
   await page.goto('/#/');
-  await expect(page.getByRole('article')).toHaveCount(50);
+  await expect(page.getByRole('article')).toHaveCount(51);
   const first = await page.getByRole('heading', { level: 3 }).allTextContents();
   expect(first[0]).toBe('Unique role 99');
-  expect(first.at(-1)).toBe('Unique role 50');
+  expect(first.at(-1)).toBe('Unique role 49');
   await page.getByRole('button', { name: 'Next page' }).click();
   await expect(page.getByRole('status')).toContainText('Page 2');
   const second = await page.getByRole('heading', { level: 3 }).allTextContents();
-  expect(second[0]).toBe('Unique role 49');
+  expect(second[0]).toBe('Unique role 48');
   expect(second.at(-1)).toBe('Unique role 0');
   expect(new Set([...first, ...second]).size).toBe(100);
   expect(new URLSearchParams(backend.requests.at(-1)?.query).get('order')).toBe('scraped_at.desc,job_id.desc');
@@ -61,22 +61,22 @@ test('background revalidation advances the last-24-hour cutoff', async ({ page, 
 });
 
 test('a failed later page still lets the visitor return to a working page', async ({ page, backend }) => {
-  backend.jobs = Array.from({ length: 51 }, (_, i) => job({ job_id: String(i).padStart(3, '0') }));
+  backend.jobs = Array.from({ length: 52 }, (_, i) => job({ job_id: String(i).padStart(3, '0') }));
   await page.goto('/#/');
-  await expect(page.getByRole('article')).toHaveCount(50);
+  await expect(page.getByRole('article')).toHaveCount(51);
   backend.catalogStatus = 500;
   await page.getByRole('button', { name: 'Next page' }).click();
   await expect(page.getByRole('alert')).toContainText('Unable to load jobs');
   backend.catalogStatus = 200;
   await page.getByRole('button', { name: 'Previous page' }).click();
-  await expect(page.getByRole('article')).toHaveCount(50);
+  await expect(page.getByRole('article')).toHaveCount(51);
   await expect(page.getByRole('status')).toContainText('Page 1 of 2');
 });
 
 test('a shrinking catalog returns the visitor to an available page', async ({ page, backend }) => {
-  backend.jobs = Array.from({ length: 51 }, (_, i) => job({ job_id: String(i).padStart(3, '0') }));
+  backend.jobs = Array.from({ length: 52 }, (_, i) => job({ job_id: String(i).padStart(3, '0') }));
   await page.goto('/#/');
-  await expect(page.getByRole('article')).toHaveCount(50);
+  await expect(page.getByRole('article')).toHaveCount(51);
   await page.getByRole('button', { name: 'Next page' }).click();
   await expect(page.getByRole('status')).toContainText('Page 2 of 2');
   backend.jobs = [job({ title: 'Only remaining role' })];

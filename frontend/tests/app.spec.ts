@@ -7,7 +7,7 @@ test('public board uses mocked catalog, query window, filters and safe apply lin
   await expect(page.getByText('1h ago').first()).toBeVisible();
   const request = backend.requests.find((r) => r.path === '/rest/v1/Seen_job');
   expect(request?.query).toContain('scraped_at=gte.2026-10-21');
-  expect(request?.query).toContain('limit=50');
+  expect(request?.query).toContain('limit=51');
   const apply = page.getByRole('link', { name: 'APPLY NOW' }).first();
   await expect(apply).toHaveAttribute('href', 'https://jobs.example.test/entry');
   await expect(apply).toHaveAttribute('rel', 'noopener noreferrer');

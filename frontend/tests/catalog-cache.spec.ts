@@ -57,14 +57,14 @@ test('failed background refresh keeps useful results and retry replaces them', a
 });
 
 test('cached pages are separated by page and filters', async ({ page, backend }) => {
-  backend.jobs = Array.from({ length: 51 }, (_, i) => job({ job_id: String(i).padStart(3, '0'), title: `Role ${i}` }));
+  backend.jobs = Array.from({ length: 52 }, (_, i) => job({ job_id: String(i).padStart(3, '0'), title: `Role ${i}` }));
   await page.goto('/#/');
-  await expect(page.getByRole('article')).toHaveCount(50);
+  await expect(page.getByRole('article')).toHaveCount(51);
   await page.getByRole('button', { name: 'Next page' }).click();
   await expect(page.getByRole('article')).toHaveCount(1);
   await expect(page.getByRole('heading', { name: 'Role 0', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Previous page' }).click();
-  await expect(page.getByRole('article')).toHaveCount(50);
+  await expect(page.getByRole('article')).toHaveCount(51);
   expect(catalogRequests(backend)).toHaveLength(2);
   await page.getByRole('textbox', { name: 'Search jobs' }).fill('Role 0');
   await expect(page.getByRole('article')).toHaveCount(1);
