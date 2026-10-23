@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, type FormEvent } from 'react';
 import { type SystemStatus } from './SketchHeader';
 import { supabase } from '../lib/supabase';
+import { functions } from '../lib/functions';
 import { incrementUserRuns } from '../lib/userService';
 import './SketchTerminal.css';
 
@@ -44,13 +45,11 @@ type AuthStep =
   | 'SIGNUP_PASSWORD'
   | 'SIGNUP_CONFIRM_PASSWORD'
   | 'SIGNIN_EMAIL'
-  | 'SIGNIN_PASSWORD'
-  | 'DONE';
+  | 'SIGNIN_PASSWORD';
 type WorkflowStep = 'IDLE' | 'JOB_TITLE' | 'RECIPIENT_EMAIL' | 'FRESHERS' | 'MIN_STARS' | 'CONFIRM' | 'RUNNING' | 'SCHEDULE_TIME' | 'SCHEDULE_CONFIRM' | 'UNSCHEDULE_CONFIRM';
 
 interface SketchTerminalProps {
   user: UserSession | null;
-  onLogin: (user: UserSession) => void;
   onLogout: () => void;
   onStatusChange: (status: SystemStatus) => void;
 }
@@ -59,13 +58,13 @@ export default function SketchTerminal({
   user,
   onLogout,
   onStatusChange,
-}: Omit<SketchTerminalProps, 'onLogin'>) {
+}: SketchTerminalProps) {
   const [lines, setLines] = useState<TerminalLine[]>([]);
   const [inputVal, setInputVal] = useState('');
   
   // Step state machines
   const [authStep, setAuthStep] = useState<AuthStep>('MODE_SELECT');
-  const [authDraft, setAuthDraft] = useState({ name: '', email: '', password: '', confirmPassword: '' });
+  const [authDraft, setAuthDraft] = useState({ name: '', email: '', password: '' });
 
   const [workflowStep, setWorkflowStep] = useState<WorkflowStep>('IDLE');
   const [workflowDraft, setWorkflowDraft] = useState<WorkflowParams>({
@@ -108,7 +107,7 @@ export default function SketchTerminal({
         { id: '8', type: 'output', text: ' ' },
       ]);
       setAuthStep('MODE_SELECT');
-      setAuthDraft({ name: '', email: '', password: '', confirmPassword: '' });
+      setAuthDraft({ name: '', email: '', password: '' });
     } else {
       setLines([
         { id: '1', type: 'header', text: '==================================================' },
@@ -193,7 +192,7 @@ export default function SketchTerminal({
     addLine({ type: 'system', text: `\n[${timestamp()}] >> [DISPATCH] Triggering GitHub Actions via Edge Function...` });
 
     try {
-      const { error } = await supabase.functions.invoke('dispatch-workflow', {
+      const { error } = await functions.invoke('dispatch-workflow', {
         body: {
           jobTitle: params.jobTitle,
           recipientEmail: params.recipientEmail,
@@ -270,7 +269,7 @@ export default function SketchTerminal({
     addLine({ type: 'system', text: `\n[${timestamp()}] >> [SCHEDULE] Saving recurring subscription...` });
 
     try {
-      const { error } = await supabase.functions.invoke('schedule-workflow', {
+      const { error } = await functions.invoke('schedule-workflow', {
         body: {
           jobTitle:          params.jobTitle,
           recipientEmail:    params.recipientEmail,
@@ -312,7 +311,7 @@ export default function SketchTerminal({
     addLine({ type: 'system', text: `\n[${timestamp()}] >> [UNSCHEDULE] Cancelling subscription...` });
 
     try {
-      const { error } = await supabase.functions.invoke('schedule-workflow', {
+      const { error } = await functions.invoke('schedule-workflow', {
         body: { action: 'unsubscribe' },
       });
 
@@ -361,7 +360,7 @@ export default function SketchTerminal({
 
     // Global navigation during authentication
     if (!user && (trimmed.toLowerCase() === 'menu' || trimmed.toLowerCase() === 'back' || trimmed.toLowerCase() === 'restart')) {
-      setAuthDraft({ name: '', email: '', password: '', confirmPassword: '' });
+      setAuthDraft({ name: '', email: '', password: '' });
       setAuthStep('MODE_SELECT');
       setLines((prev) => [
         ...prev,
@@ -380,7 +379,7 @@ export default function SketchTerminal({
       if (authStep === 'MODE_SELECT') {
         const choice = trimmed.toLowerCase();
         if (choice === '1' || choice === 'signup' || choice === 'sign up' || choice === 'register') {
-          setAuthDraft({ name: '', email: '', password: '', confirmPassword: '' });
+          setAuthDraft({ name: '', email: '', password: '' });
           setAuthStep('SIGNUP_NAME');
           setLines((prev) => [
             ...prev,
@@ -388,7 +387,7 @@ export default function SketchTerminal({
           ]);
           return;
         } else if (choice === '2' || choice === 'signin' || choice === 'sign in' || choice === 'login') {
-          setAuthDraft({ name: '', email: '', password: '', confirmPassword: '' });
+          setAuthDraft({ name: '', email: '', password: '' });
           setAuthStep('SIGNIN_EMAIL');
           setLines((prev) => [
             ...prev,
@@ -475,7 +474,7 @@ export default function SketchTerminal({
               { id: String(Date.now() + 3), type: 'output', text: '  [2] Sign In (Log in with existing credentials)\n' },
             ]);
             setAuthStep('MODE_SELECT');
-            setAuthDraft({ name: '', email: '', password: '', confirmPassword: '' });
+            setAuthDraft({ name: '', email: '', password: '' });
             return;
           }
 
@@ -494,7 +493,7 @@ export default function SketchTerminal({
               { id: String(Date.now() + 4), type: 'output', text: '  [2] Sign In (Log in with existing credentials)\n' },
             ]);
             setAuthStep('MODE_SELECT');
-            setAuthDraft({ name: '', email: '', password: '', confirmPassword: '' });
+            setAuthDraft({ name: '', email: '', password: '' });
           }
         })();
         

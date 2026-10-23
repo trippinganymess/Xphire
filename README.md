@@ -45,7 +45,8 @@ The application opens directly to the Job Board, which turns the scraping and AI
 - Shows company, role, location, experience, salary, source, relative posting time, and Gemini-generated company rating.
 - Supports keyword searches across company, title, and location.
 - Filters opportunities by minimum star rating or fresher-friendly experience requirements.
-- Refreshes automatically every 60 seconds as new pipeline results arrive in Supabase.
+- Refreshes the visible catalog page automatically every 30 seconds as new pipeline results arrive in Supabase.
+- Lets signed-in users start a scraper run with **REFRESH**, showing an already-refreshing message and an approximately 15-minute estimate when a run is active. See [manual refresh setup](docs/manual-job-refresh.md) for deployment requirements.
 - Links directly to the original job posting through each **Apply Now** button.
 - Uses the same neo-brutalist visual system as the search terminal and authentication experience.
 

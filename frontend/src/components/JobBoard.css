@@ -55,6 +55,49 @@
   outline-offset: 3px;
 }
 
+/* ── Manual scraper refresh ── */
+.job-board-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.job-board-refresh {
+  margin-left: auto;
+  padding: 16px 28px;
+  border: 2px solid var(--cyan-neon);
+  background: #49182b;
+  color: #c2e594;
+  box-shadow: 6px 6px 0 var(--ink-black);
+  font-family: var(--font-mono);
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.job-board-refresh:hover:not(:disabled) {
+  transform: translate(-2px, -2px);
+}
+
+.job-board-refresh:focus-visible {
+  outline: 3px solid var(--ink-black);
+  outline-offset: 4px;
+}
+
+.job-board-refresh:disabled {
+  opacity: 0.7;
+  cursor: default;
+}
+
+.job-board-refresh-status {
+  margin: 0 0 24px;
+  font-family: var(--font-mono);
+  color: var(--ink-black);
+  line-height: 1.6;
+}
+
 /* ── Filter Bar ── */
 .job-board-filter-bar {
   display: flex;

@@ -1,2 +1,6 @@
 [functions.dispatch-workflow]
 verify_jwt = false
+
+# Status is public; POST validates the user with Supabase Auth in the handler.
+[functions.refresh-jobs]
+verify_jwt = false
