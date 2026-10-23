@@ -78,6 +78,11 @@ function matchesTerm(row: ReturnType<typeof job>, term: string): boolean {
 
 export interface MockBackend {
   jobs: ReturnType<typeof job>[];
+  refreshStatus: 'idle' | 'started' | 'running' | 'completed' | 'failed';
+  refreshRunId: number | undefined;
+  refreshPreviousRunId: number | undefined;
+  refreshHttpStatus: number;
+  refreshGate: Promise<void> | null;
   catalogStatus: number;
   catalogDelay: boolean;
   catalogGate: Promise<void> | null;
@@ -89,6 +94,8 @@ export const test = base.extend<{ backend: MockBackend }>({
     const backend: MockBackend = {
       jobs: [job(), job({ job_id: 'senior', title: 'Senior Analyst', company: 'Beta',
         location: 'Mumbai, India', experience: '5+ Yrs', rating: 2 })],
+      refreshStatus: 'idle', refreshRunId: 42, refreshPreviousRunId: undefined,
+      refreshHttpStatus: 200, refreshGate: null,
       catalogStatus: 200, catalogDelay: false, catalogGate: null, requests: [],
     };
     const unexpected: string[] = [];
@@ -105,6 +112,8 @@ export const test = base.extend<{ backend: MockBackend }>({
       if (text.includes('Failed to load resource: the server responded with a status of 403')) return;
       // Catalog failure/retry tests deliberately script HTTP errors.
       if (backend.catalogStatus !== 200 && text.includes(`Failed to load resource: the server responded with a status of ${backend.catalogStatus}`)) return;
+      // Refresh failure/retry tests deliberately script HTTP errors.
+      if (backend.refreshHttpStatus !== 200 && text.includes(`Failed to load resource: the server responded with a status of ${backend.refreshHttpStatus}`)) return;
       errors.push(text);
     });
     await page.clock.install({ time: new Date(NOW) });
@@ -166,6 +175,20 @@ export const test = base.extend<{ backend: MockBackend }>({
       }
       if (url.pathname === '/auth/v1/user' && request.method() === 'GET') {
         return route.fulfill({ json: session.user });
+      }
+      if (url.pathname === '/functions/v1/refresh-jobs') {
+        const status = backend.refreshHttpStatus;
+        const gate = backend.refreshGate;
+        const result = request.method() === 'POST' && backend.refreshStatus === 'idle'
+          ? 'started' : backend.refreshStatus;
+        if (request.method() === 'POST' && status === 200) backend.refreshStatus = 'running';
+        if (gate) await gate;
+        return route.fulfill({ status, json: status === 200
+          ? { status: result, estimatedMinutes: 15,
+            ...(backend.refreshRunId !== undefined ? { runId: backend.refreshRunId } : {}),
+            ...(backend.refreshPreviousRunId !== undefined ? { previousRunId: backend.refreshPreviousRunId } : {}),
+          }
+          : { error: 'Offline refresh unavailable' } });
       }
       if (url.pathname === '/functions/v1/dispatch-workflow' && request.method() === 'POST') {
         return route.fulfill({ status: 403, json: { error: 'Offline dispatch rejected' } });

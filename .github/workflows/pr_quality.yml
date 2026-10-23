@@ -33,6 +33,34 @@ jobs:
       - name: Dependency advisories
         run: python -m pip_audit --disable-pip -r requirements-dev.txt
 
+  refresh-database:
+    name: Refresh lease SQL and permissions
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: offline-test-password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: 5432
+      PGUSER: postgres
+      PGDATABASE: postgres
+      PGPASSWORD: offline-test-password
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create synthetic Supabase roles
+        run: psql -v ON_ERROR_STOP=1 -c 'create role anon; create role authenticated; create role service_role;'
+      - name: Apply and test refresh lease in disposable PostgreSQL
+        run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/003_job_refresh_lease.sql -f tests/job-refresh-lease.sql
+
   frontend:
     name: Frontend type, lint, build and mocked browser regressions
     runs-on: ubuntu-latest
@@ -59,6 +87,10 @@ jobs:
         run: npm run build
       - name: Install test browser
         run: npx playwright install --with-deps chromium
+      - name: Refresh Edge Function offline regressions
+        run: node --test ../tests/job-refresh.test.mjs
+      - name: Refresh handler type check
+        run: npx tsc --noEmit --strict --target ES2022 --module nodenext --skipLibCheck ../supabase/functions/refresh-jobs/handler.ts
       - name: Mocked browser regressions
         run: npm test
       - name: Dependency advisories (including build tools)

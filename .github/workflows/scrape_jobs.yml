@@ -9,9 +9,15 @@ on:
 permissions:
   contents: read
 
+# Scheduled and manual scrapes share a lock; never cancel a running refresh.
+concurrency:
+  group: scrape-jobs
+  cancel-in-progress: false
+
 jobs:
   scrape:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
 
     env:
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}

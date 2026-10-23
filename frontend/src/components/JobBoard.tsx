@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { JOB_PAGE_SIZE, useJobPage, type JobFilters } from '../lib/jobCatalog';
+import { useJobRefresh } from '../lib/jobRefresh';
 import './JobBoard.css';
 
 const RATING_OPTIONS = ['All', '5', '4', '3', '2', '1'];
@@ -23,6 +24,7 @@ export default function JobBoard() {
     page: 1,
   });
   const { data, loading, error, refresh } = useJobPage(filters, page);
+  const scraper = useJobRefresh(refresh);
   const jobs = data?.jobs ?? [];
   const total = data?.total ?? 0;
   const pages = Math.max(1, Math.ceil(total / JOB_PAGE_SIZE));
@@ -104,7 +106,23 @@ export default function JobBoard() {
       )}
       {loading && !data && <div className="job-board-empty"><p>System scanning for new jobs...</p></div>}
       {loading && data && <p className="job-board-feedback">Refreshing jobs...</p>}
-      {(data || page > 1) && renderPagination()}
+      <div className="job-board-actions">
+        {(data || page > 1) && renderPagination()}
+        <button
+          type="button"
+          className="job-board-refresh"
+          disabled={scraper.checking || scraper.busy || scraper.running}
+          aria-describedby={scraper.message ? 'job-refresh-status' : undefined}
+          onClick={() => { void scraper.startRefresh(); }}
+        >
+          {scraper.busy ? 'STARTING...' : scraper.running ? 'REFRESHING...' : scraper.checking ? 'CHECKING...' : 'REFRESH'}
+        </button>
+      </div>
+      {scraper.message && (
+        <p id="job-refresh-status" className="job-board-refresh-status" role={scraper.error ? 'alert' : 'status'}>
+          {scraper.message}
+        </p>
+      )}
 
       {data && jobs.length === 0 && !loading && !error && (
         <div className="job-board-empty">

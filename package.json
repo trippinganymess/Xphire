@@ -6,6 +6,7 @@
     "typecheck": "npm --prefix frontend run typecheck",
     "lint": "npm --prefix frontend run lint",
     "test": "npm --prefix frontend test",
+    "test:refresh": "node --test tests/job-refresh.test.mjs",
     "docs:check": "python3 scripts/check_docs.py"
   }
 }
