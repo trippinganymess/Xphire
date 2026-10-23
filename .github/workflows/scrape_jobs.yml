@@ -1,9 +1,9 @@
-name: Scrape Jobs (30 min)
+name: Scrape Jobs (10 min)
 
 on:
   schedule:
-    # Every 30 minutes (UTC)
-    - cron: '*/30 * * * *'
+    # Every 10 minutes (UTC)
+    - cron: '*/10 * * * *'
   workflow_dispatch:
 
 permissions:
