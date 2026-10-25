@@ -86,9 +86,7 @@ export interface MockBackend {
   catalogStatus: number;
   catalogDelay: boolean;
   catalogGate: Promise<void> | null;
-  dispatchHttpStatus: number;
-  dispatchResult: 'accepted' | 'pending';
-  requests: { method: string; path: string; body: unknown; query: string; idempotencyKey: string | null }[];
+  requests: { method: string; path: string; body: unknown; query: string }[];
 }
 
 export const test = base.extend<{ backend: MockBackend }>({
@@ -98,8 +96,7 @@ export const test = base.extend<{ backend: MockBackend }>({
         location: 'Mumbai, India', experience: '5+ Yrs', rating: 2 })],
       refreshStatus: 'idle', refreshRunId: 42, refreshPreviousRunId: undefined,
       refreshHttpStatus: 200, refreshGate: null,
-      catalogStatus: 200, catalogDelay: false, catalogGate: null,
-      dispatchHttpStatus: 403, dispatchResult: 'accepted', requests: [],
+      catalogStatus: 200, catalogDelay: false, catalogGate: null, requests: [],
     };
     const unexpected: string[] = [];
     const errors: string[] = [];
@@ -115,7 +112,6 @@ export const test = base.extend<{ backend: MockBackend }>({
       if (text.includes('Failed to load resource: the server responded with a status of 403')) return;
       // Catalog failure/retry tests deliberately script HTTP errors.
       if (backend.catalogStatus !== 200 && text.includes(`Failed to load resource: the server responded with a status of ${backend.catalogStatus}`)) return;
-      if (backend.dispatchHttpStatus !== 202 && text.includes(`Failed to load resource: the server responded with a status of ${backend.dispatchHttpStatus}`)) return;
       // Refresh failure/retry tests deliberately script HTTP errors.
       if (backend.refreshHttpStatus !== 200 && text.includes(`Failed to load resource: the server responded with a status of ${backend.refreshHttpStatus}`)) return;
       errors.push(text);
@@ -133,8 +129,7 @@ export const test = base.extend<{ backend: MockBackend }>({
         return route.abort('blockedbyclient');
       }
       const body = request.postData() ? request.postDataJSON() : null;
-      backend.requests.push({ method: request.method(), path: url.pathname, body, query: url.search,
-        idempotencyKey: request.headers()['idempotency-key'] ?? null });
+      backend.requests.push({ method: request.method(), path: url.pathname, body, query: url.search });
       if (url.pathname === '/rest/v1/Seen_job' && request.method() === 'GET') {
         let rows = [...backend.jobs];
         for (const [key, value] of url.searchParams) {
@@ -175,9 +170,6 @@ export const test = base.extend<{ backend: MockBackend }>({
         return route.fulfill({ json: { id: session.user.id, name: 'Test Candidate',
           email: session.user.email, total_runs: 0 } });
       }
-      if (url.pathname === '/rest/v1/users' && request.method() === 'PATCH') {
-        return route.fulfill({ status: 204 });
-      }
       if (url.pathname === '/auth/v1/token' && request.method() === 'POST') {
         return route.fulfill({ json: session });
       }
@@ -199,8 +191,7 @@ export const test = base.extend<{ backend: MockBackend }>({
           : { error: 'Offline refresh unavailable' } });
       }
       if (url.pathname === '/functions/v1/dispatch-workflow' && request.method() === 'POST') {
-        return route.fulfill({ status: backend.dispatchHttpStatus, json: backend.dispatchHttpStatus === 202
-          ? { status: backend.dispatchResult } : { error: 'Offline dispatch rejected' } });
+        return route.fulfill({ status: 403, json: { error: 'Offline dispatch rejected' } });
       }
       unexpected.push(`${request.method()} ${url.pathname}`);
       return route.abort('blockedbyclient');
