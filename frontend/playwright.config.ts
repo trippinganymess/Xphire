@@ -18,7 +18,7 @@ export default defineConfig({
     url: 'http://127.0.0.1:4173',
     reuseExistingServer: false,
     env: {
-      VITE_SUPABASE_URL: 'https://supabase.test',
+      VITE_SUPABASE_URL: 'https://placeholder.supabase.co',
       VITE_SUPABASE_ANON_KEY: 'offline-test-key-not-a-credential',
       BROWSER: 'none',
     },

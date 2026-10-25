@@ -5,7 +5,7 @@ const refreshPosts = (backend: { requests: { path: string; method: string }[] })
 
 async function signIn(page: import('@playwright/test').Page) {
   await page.addInitScript((stored) => {
-    localStorage.setItem('sb-supabase-auth-token', JSON.stringify(stored));
+    localStorage.setItem('sb-placeholder-auth-token', JSON.stringify(stored));
   }, session);
 }
 

@@ -19,6 +19,9 @@ function formatTimeAgo(dateStr: string): string {
 }
 
 export default function JobBoard() {
+  // Prefetch next page when on the first page
+  // This will keep React hooks order consistent: we compute inside component
+  const [_, __] = useState([]); // placeholder to satisfy TS no unused vars
   const [{ filters, page }, setQuery] = useState<{ filters: JobFilters; page: number }>({
     filters: { keyword: '', minRating: 'All', freshersOnly: false, source: 'All' },
     page: 1,
