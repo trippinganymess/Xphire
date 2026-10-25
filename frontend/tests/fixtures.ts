@@ -202,6 +202,20 @@ export const test = base.extend<{ backend: MockBackend }>({
           }
           : { error: 'Offline refresh unavailable' } });
       }
+      if (url.pathname === '/functions/v1/refresh-jobs') {
+        const status = backend.refreshHttpStatus;
+        const gate = backend.refreshGate;
+        const result = request.method() === 'POST' && backend.refreshStatus === 'idle'
+          ? 'started' : backend.refreshStatus;
+        if (request.method() === 'POST' && status === 200) backend.refreshStatus = 'running';
+        if (gate) await gate;
+        return route.fulfill({ status, json: status === 200
+          ? { status: result, estimatedMinutes: 15,
+            ...(backend.refreshRunId !== undefined ? { runId: backend.refreshRunId } : {}),
+            ...(backend.refreshPreviousRunId !== undefined ? { previousRunId: backend.refreshPreviousRunId } : {}),
+          }
+          : { error: 'Offline refresh unavailable' } });
+      }
       if (url.pathname === '/functions/v1/dispatch-workflow' && request.method() === 'POST') {
         return route.fulfill({ status: 403, json: { error: 'Offline dispatch rejected' } });
       }
