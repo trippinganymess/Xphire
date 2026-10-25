@@ -133,7 +133,7 @@ export const test = base.extend<{ backend: MockBackend }>({
       if (url.origin === 'http://127.0.0.1:4173') return route.continue();
       // Font loading is decorative and must not depend on Google availability.
       if (['fonts.googleapis.com', 'fonts.gstatic.com'].includes(url.hostname)) return route.abort();
-      if (url.origin !== 'https://supabase.test') {
+      if (url.origin !== 'https://placeholder.supabase.co') {
         unexpected.push(request.url());
         return route.abort('blockedbyclient');
       }
@@ -226,7 +226,7 @@ export const test = base.extend<{ backend: MockBackend }>({
       const url = new URL(socket.url());
       // Vite HMR may connect locally; Supabase realtime is deliberately inert.
       if (url.hostname === '127.0.0.1') socket.connectToServer();
-      else if (url.hostname === 'supabase.test') socket.close();
+      else if (url.hostname === 'placeholder.supabase.co') socket.close();
       else { unexpected.push(socket.url()); socket.close(); }
     });
     await provide(backend);

@@ -16,7 +16,7 @@ for (const choice of ['3', 'google']) {
     };
     backend.userProfile = null;
     const authorizationUrls: URL[] = [];
-    await page.route('https://supabase.test/auth/v1/authorize?**', async (route) => {
+    await page.route('https://placeholder.supabase.co/auth/v1/authorize?**', async (route) => {
       const url = new URL(route.request().url());
       authorizationUrls.push(url);
       const callback = new URL(url.searchParams.get('redirect_to')!);
@@ -65,7 +65,7 @@ for (const errorLocation of ['query', 'fragment']) {
 test('expired PKCE callback can retry without re-exchanging on reload', async ({ page, backend }) => {
   backend.authTokenStatus = 400;
   await page.addInitScript(() => {
-    localStorage.setItem('sb-supabase-auth-token-code-verifier', JSON.stringify('offline-verifier'));
+    localStorage.setItem('sb-placeholder-auth-token-code-verifier', JSON.stringify('offline-verifier'));
   });
   await page.goto('/?code=expired-code#/terminal');
   await expect(page.getByText(/Sign-in failed: OAuth code has expired/)).toBeVisible();
@@ -134,7 +134,7 @@ test('pending Google redirect disables the prompt and ignores duplicate submits'
     };
   });
   let authorizations = 0;
-  await page.route('https://supabase.test/auth/v1/authorize?**', async (route) => {
+  await page.route('https://placeholder.supabase.co/auth/v1/authorize?**', async (route) => {
     authorizations++;
     const callback = new URL(new URL(route.request().url()).searchParams.get('redirect_to')!);
     callback.searchParams.set('code', 'offline-google-code');
@@ -161,9 +161,9 @@ test('pending Google redirect disables the prompt and ignores duplicate submits'
 
 test('older implicit confirmation links restore the session without changing subsequent Google PKCE', async ({ page, backend }) => {
   const token = `eyJhbGciOiJIUzI1NiJ9.${Buffer.from(JSON.stringify({ exp: 1792674000 })).toString('base64url')}.b2ZmbGluZQ`;
-  await page.route('https://supabase.test/auth/v1/logout**', (route) => route.fulfill({ status: 204 }));
+  await page.route('https://placeholder.supabase.co/auth/v1/logout**', (route) => route.fulfill({ status: 204 }));
   let authorization: URL | undefined;
-  await page.route('https://supabase.test/auth/v1/authorize?**', async (route) => {
+  await page.route('https://placeholder.supabase.co/auth/v1/authorize?**', async (route) => {
     authorization = new URL(route.request().url());
     const callback = new URL(authorization.searchParams.get('redirect_to')!);
     callback.searchParams.set('code', 'offline-google-code');

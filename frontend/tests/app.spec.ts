@@ -41,7 +41,7 @@ test('terminal access starts at auth menu, never creates an account', async ({ p
 
 test('restored synthetic session can submit a mocked, rejected dispatch', async ({ page, backend }) => {
   await page.addInitScript((stored) => {
-    localStorage.setItem('sb-supabase-auth-token', JSON.stringify(stored));
+    localStorage.setItem('sb-placeholder-auth-token', JSON.stringify(stored));
   }, session);
   await page.goto('/#/terminal');
   await expect(page.getByText('✓ Authentication complete. Welcome, Test Candidate!')).toBeVisible();
