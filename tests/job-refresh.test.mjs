@@ -10,7 +10,8 @@ const queued = { id: 42, status: 'queued', conclusion: null };
 function setup() {
   const state = { runs: [completed], pending: false, authStatus: 200, anonymous: false,
     githubStatus: 200, dispatchStatus: 204, dispatchTimeout: false, leaseStatus: 200,
-    afterAcquire: null, requests: [], dispatches: 0 };
+    afterAcquire: null, requests: [], dispatches: 0, requestRemaining: 120,
+    githubRemaining: 12, cache: null, statusLease: false, statusToken: null };
   const http = async (input, init = {}) => {
     const url = new URL(String(input));
     const method = init.method ?? 'GET';
@@ -27,6 +28,26 @@ function setup() {
       assert.equal(headers.get('Authorization'), `Bearer ${config.serviceKey}`);
       assert.equal(method, 'POST');
       if (state.leaseStatus !== 200) return Response.json({ error: 'lease rejected' }, { status: state.leaseStatus });
+      if (url.pathname.endsWith('/reserve_job_refresh_budget')) {
+        const kind = JSON.parse(init.body).p_kind;
+        assert.ok(['request', 'github'].includes(kind));
+        const key = kind === 'request' ? 'requestRemaining' : 'githubRemaining';
+        return Response.json(state[key]-- > 0);
+      }
+      if (url.pathname.endsWith('/claim_job_refresh_status')) {
+        if (state.cache) return Response.json({ kind: 'cached', workflow_runs: state.cache, pending: state.pending });
+        if (state.statusLease) return Response.json({ kind: 'busy', pending: state.pending });
+        state.statusLease = true;
+        state.statusToken = JSON.parse(init.body).p_token;
+        return Response.json({ kind: 'fetch', pending: state.pending });
+      }
+      if (url.pathname.endsWith('/finish_job_refresh_status')) {
+        const body = JSON.parse(init.body);
+        assert.equal(body.p_token, state.statusToken);
+        state.cache = body.p_runs;
+        state.statusLease = false;
+        return Response.json(state.pending);
+      }
       if (url.pathname.endsWith('/job_refresh_pending')) return Response.json(state.pending);
       if (url.pathname.endsWith('/acquire_job_refresh_lease')) {
         if (state.pending) return Response.json(false);
@@ -172,4 +193,69 @@ test('preflight and unsupported methods never call external services', async () 
   assert.equal(preflight.headers.get('Access-Control-Allow-Methods'), 'GET, POST, OPTIONS');
   assert.equal((await request('DELETE')).status, 405);
   assert.equal(state.requests.length, 0);
+});
+
+test('public status requests share a bounded snapshot instead of spending PAT quota per visitor', async () => {
+  const { state, request } = setup();
+  for (let i = 0; i < 20; i++) {
+    const response = await request();
+    assert.equal(response.status, 200);
+    assert.equal((await response.json()).runId, 40);
+  }
+  assert.equal(state.requests.filter((r) => r.path.endsWith('/runs')).length, 1);
+});
+
+test('public request budget returns a recoverable 429 without more privileged status work', async () => {
+  const { state, request } = setup();
+  state.requestRemaining = 1;
+  assert.equal((await request()).status, 200);
+  const before = state.requests.length;
+  const rejected = await request();
+  assert.equal(rejected.status, 429);
+  assert.equal(rejected.headers.get('Retry-After'), '60');
+  assert.equal(state.requests.length, before + 1);
+});
+
+test('authenticated callers cannot spend unlimited GitHub reads even with many active-run checks', async () => {
+  const { state, request } = setup();
+  state.runs = [queued];
+  state.githubRemaining = 1;
+  assert.equal((await request('POST', true)).status, 200);
+  const rejected = await request('POST', true);
+  assert.equal(rejected.status, 429);
+  assert.equal(state.requests.filter((r) => r.path.endsWith('/runs')).length, 1);
+  assert.equal(state.dispatches, 0);
+});
+
+test('a known read-budget rejection after acquiring a dispatch lease releases that lease', async () => {
+  const { state, request } = setup();
+  state.githubRemaining = 1;
+  assert.equal((await request('POST', true)).status, 429);
+  assert.equal(state.pending, false);
+  assert.equal(state.dispatches, 0);
+});
+
+test('concurrent public cache misses coalesce into one upstream read', async () => {
+  const { state, request } = setup();
+  const responses = await Promise.all(Array.from({ length: 20 }, () => request()));
+  assert.ok(responses.every((response) => response.status === 200));
+  assert.equal(state.requests.filter((r) => r.path.endsWith('/runs')).length, 1);
+});
+
+test('an expired database snapshot is refreshed and only the public projection is stored', async () => {
+  const { state, request } = setup();
+  state.runs = [{ ...completed, private_actor: 'must-not-be-cached' }];
+  await request();
+  assert.deepEqual(state.cache, [completed]);
+  state.cache = null; // The SQL boundary controls expiry, not an in-process clock.
+  state.runs = [queued];
+  assert.equal((await (await request()).json()).status, 'running');
+  assert.equal(state.requests.filter((r) => r.path.endsWith('/runs')).length, 2);
+});
+
+test('a busy cross-instance cache lease fails closed rather than issuing another upstream read', async () => {
+  const { state, request } = setup();
+  state.statusLease = true;
+  assert.equal((await request()).status, 503);
+  assert.equal(state.requests.filter((r) => r.path.endsWith('/runs')).length, 0);
 });

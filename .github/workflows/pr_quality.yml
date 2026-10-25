@@ -34,7 +34,7 @@ jobs:
         run: python -m pip_audit --disable-pip -r requirements-dev.txt
 
   refresh-database:
-    name: Refresh lease SQL and permissions
+    name: Refresh and email dispatch SQL guards
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -56,10 +56,24 @@ jobs:
       PGPASSWORD: offline-test-password
     steps:
       - uses: actions/checkout@v4
-      - name: Create synthetic Supabase roles
-        run: psql -v ON_ERROR_STOP=1 -c 'create role anon; create role authenticated; create role service_role;'
-      - name: Apply and test refresh lease in disposable PostgreSQL
-        run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/003_job_refresh_lease.sql -f tests/job-refresh-lease.sql
+      - name: Create synthetic Supabase roles and auth schema
+        run: psql -v ON_ERROR_STOP=1 -f tests/supabase-test-roles.sql
+      - name: Apply and test guards in disposable PostgreSQL
+        run: >-
+          psql -v ON_ERROR_STOP=1
+          -f supabase/migrations/003_job_refresh_lease.sql
+          -f supabase/migrations/004_job_refresh_status_guard.sql
+          -f supabase/migrations/005_email_dispatch_guard.sql
+          -f tests/job-refresh-lease.sql
+          -f tests/job-refresh-status-guard.sql
+          -f tests/email-dispatch-guard.sql
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Concurrent guard acquisitions in disposable PostgreSQL
+        env:
+          XPHIRE_DISPOSABLE_DB: '1'
+        run: node --test tests/dispatch-concurrency.test.mjs
 
   frontend:
     name: Frontend type, lint, build and mocked browser regressions
@@ -87,10 +101,10 @@ jobs:
         run: npm run build
       - name: Install test browser
         run: npx playwright install --with-deps chromium
-      - name: Refresh Edge Function offline regressions
-        run: node --test ../tests/job-refresh.test.mjs
-      - name: Refresh handler type check
-        run: npx tsc --ignoreConfig --noEmit --strict --target ES2022 --module nodenext --skipLibCheck ../supabase/functions/refresh-jobs/handler.ts
+      - name: Edge Function offline regressions
+        run: node --test ../tests/job-refresh.test.mjs ../tests/workflow-dispatch.test.mjs
+      - name: Edge handler type checks
+        run: npx tsc --ignoreConfig --noEmit --strict --target ES2022 --module nodenext --skipLibCheck ../supabase/functions/refresh-jobs/handler.ts ../supabase/functions/dispatch-workflow/handler.ts
       - name: Mocked browser regressions
         run: npm test
       - name: Dependency advisories (including build tools)

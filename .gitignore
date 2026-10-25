@@ -14,3 +14,6 @@ supabase/.temp/
 .ruff_cache/
 frontend/playwright-report/
 frontend/test-results/
+
+# Local tracker telemetry (never commit)
+.pi/performance-tracker/

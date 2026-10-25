@@ -1,3 +1,4 @@
+# The handler verifies bearer identity, verified recipient, quotas and replay keys.
 [functions.dispatch-workflow]
 verify_jwt = false
 

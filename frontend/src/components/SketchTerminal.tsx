@@ -78,6 +78,7 @@ export default function SketchTerminal({
 
   const terminalBodyRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const dispatchRetryRef = useRef<{ payload: string; key: string } | null>(null);
 
   // Auto-scroll to bottom on output
   useEffect(() => {
@@ -156,7 +157,9 @@ export default function SketchTerminal({
             ? 'Job title to scout (recurring) [e.g. Software Engineer]:'
             : 'Job title to search [e.g. Software Engineer]:';
         case 'RECIPIENT_EMAIL':
-          return `Recipient email [default: ${user.email}]:`;
+          return flowMode === 'run'
+            ? `Verified account email only [${user.email}]:`
+            : `Recipient email [default: ${user.email}]:`;
         case 'FRESHERS':
           return 'Freshers / Entry-level roles only? (y/n) [default: n]:';
         case 'MIN_STARS':
@@ -180,6 +183,34 @@ export default function SketchTerminal({
 
   // Run execution simulation
   const executeWorkflow = async (params: WorkflowParams) => {
+    const authorizedParams = { ...params, recipientEmail: user?.email ?? params.recipientEmail };
+    const idempotentPayload = JSON.stringify({
+      jobTitle: authorizedParams.jobTitle,
+      recipientEmail: authorizedParams.recipientEmail,
+      freshersOnly: authorizedParams.freshersOnly,
+      minStars: authorizedParams.minStars,
+    });
+    const retryStorageKey = `dispatchRetries:${user?.email.toLowerCase() ?? 'unknown'}`;
+    let storedRetries: Record<string, string> = {};
+    try {
+      const stored = JSON.parse(sessionStorage.getItem(retryStorageKey) ?? '{}');
+      if (stored && typeof stored === 'object' && !Array.isArray(stored)) storedRetries = stored;
+    } catch {
+      // Storage can be unavailable in restricted browser contexts; the in-memory retry still works.
+    }
+    const currentRetry = dispatchRetryRef.current?.payload === idempotentPayload
+      ? dispatchRetryRef.current.key
+      : storedRetries[idempotentPayload];
+    const idempotencyKey = currentRetry && /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(currentRetry)
+      ? currentRetry
+      : crypto.randomUUID();
+    dispatchRetryRef.current = { payload: idempotentPayload, key: idempotencyKey };
+    storedRetries[idempotentPayload] = idempotencyKey;
+    try {
+      sessionStorage.setItem(retryStorageKey, JSON.stringify(storedRetries));
+    } catch {
+      // Storage can be unavailable in restricted browser contexts; retain the key in memory.
+    }
     setWorkflowStep('RUNNING');
     onStatusChange('running');
 
@@ -192,13 +223,16 @@ export default function SketchTerminal({
     addLine({ type: 'system', text: `\n[${timestamp()}] >> [DISPATCH] Triggering GitHub Actions via Edge Function...` });
 
     try {
-      const { error } = await functions.invoke('dispatch-workflow', {
+      const { data, error } = await functions.invoke('dispatch-workflow', {
+        // One-time dispatches carry only the four validated workflow fields;
+        // scheduling preferences belong to the separate schedule-workflow path.
         body: {
-          jobTitle: params.jobTitle,
-          recipientEmail: params.recipientEmail,
-          freshersOnly: params.freshersOnly,
-          minStars: params.minStars
-        }
+          jobTitle: authorizedParams.jobTitle,
+          recipientEmail: authorizedParams.recipientEmail,
+          freshersOnly: authorizedParams.freshersOnly,
+          minStars: authorizedParams.minStars,
+        },
+        headers: { 'Idempotency-Key': idempotencyKey },
       });
 
       if (error) {
@@ -216,9 +250,29 @@ export default function SketchTerminal({
         return;
       }
 
-      addLine({ type: 'success', text: `[${timestamp()}] >> [SUCCESS] Workflow dispatched successfully!` });
-      addLine({ type: 'output', text: `[${timestamp()}] >> [PARAM] Job Title: "${params.jobTitle}"` });
-      addLine({ type: 'output', text: `[${timestamp()}] >> [PARAM] Recipient: ${params.recipientEmail}` });
+      if (data?.status === 'pending') {
+        addLine({ type: 'error', text: `[${timestamp()}] >> [PENDING] The previous dispatch outcome is still unknown. Retry later with this same idempotency key.` });
+        setWorkflowStep('IDLE');
+        onStatusChange('online');
+        return;
+      }
+      if (data?.status !== 'accepted') {
+        addLine({ type: 'error', text: `[${timestamp()}] >> [ERROR] Dispatch returned an unexpected response; retry with this same idempotency key.` });
+        setWorkflowStep('IDLE');
+        onStatusChange('online');
+        return;
+      }
+
+      dispatchRetryRef.current = null;
+      try {
+        delete storedRetries[idempotentPayload];
+        sessionStorage.setItem(retryStorageKey, JSON.stringify(storedRetries));
+      } catch {
+        // A stale key can only deduplicate a future identical run; it cannot duplicate dispatch.
+      }
+      addLine({ type: 'success', text: `[${timestamp()}] >> [SUCCESS] GitHub accepted the workflow dispatch; email delivery is not yet confirmed.` });
+      addLine({ type: 'output', text: `[${timestamp()}] >> [PARAM] Job Title: "${authorizedParams.jobTitle}"` });
+      addLine({ type: 'output', text: `[${timestamp()}] >> [PARAM] Recipient: ${authorizedParams.recipientEmail}` });
       
       // Update user runs in background
       if (user) {
@@ -241,7 +295,7 @@ export default function SketchTerminal({
       }, 3000);
 
       setTimeout(() => {
-        addLine({ type: 'system', text: `[${timestamp()}] >> Note: Actual execution takes 2-5 minutes. You will receive an email at ${params.recipientEmail} when complete.` });
+        addLine({ type: 'system', text: `[${timestamp()}] >> Note: The accepted workflow may take 2-5 minutes. Email delivery will be reported separately.` });
       }, 4500);
 
       setTimeout(() => {
@@ -556,7 +610,14 @@ export default function SketchTerminal({
 
     if (workflowStep === 'RECIPIENT_EMAIL') {
       const email = trimmed || user!.email;
-      setWorkflowDraft((d) => ({ ...d, recipientEmail: email }));
+      if (flowMode === 'run' && email.toLowerCase() !== user!.email.toLowerCase()) {
+        setLines((prev) => [...prev, {
+          id: String(Date.now()), type: 'error',
+          text: `One-time dispatches can only be sent to your verified account email (${user!.email}). Please try again.`,
+        }]);
+        return;
+      }
+      setWorkflowDraft((d) => ({ ...d, recipientEmail: flowMode === 'run' ? user!.email : email }));
       setWorkflowStep('FRESHERS');
       return;
     }

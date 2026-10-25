@@ -55,6 +55,22 @@ Approved: 2026-10-22. Goal: a **verified fresher shortlist**, with **Material De
 
 The user approved [public discovery performance](performance-discovery.md) as a separately testable slice on `V2/performance-discovery`, based on merged ticket 01. It delivers 50-job server-filtered pages over the full last-24-hour window, lazy terminal routing, and brief in-memory public-page caching/background revalidation without waiting for the entire M3/eligibility chain. This exception does **not** mark ticket 12 or its blockers complete; normalized eligibility/lifecycle and board/digest parity remain in their original tickets.
 
+## PR #38 remediation slice
+
+This is a **separate remediation index** for seven findings from PR #38, not a rewrite of the original 00–22 V2 roadmap or a claim that its future scope is complete. All seven notes start `in_progress`; note publication does not mean a fix, quiz, or verification has happened. The accepted integration target is the existing `fix/pr38-review` PR #38 performance branch, so no dedicated branches are created for these findings. Each note retains its conventional `V2/<note-stem>` branch metadata to satisfy the independent-ticket index/checker convention.
+
+| Ticket | Finding / delivery | Blocked by | Coverage |
+|---|---|---|---|
+| [23 — Board render recovery](23-pr38-board-rendering.md) | Repair bad import and TDZ failure that break board build/render | None | Browser prerequisite for 24–27 |
+| [24 — Failed-refresh feedback](24-pr38-failed-refresh-feedback.md) | Distinguish failed initial load from empty results; offer retry | 23 | Board error/recovery state |
+| [25 — Semantic refresh control](25-pr38-semantic-refresh-control.md) | Replace undefined cyan token; preserve accessible refresh semantics | 23 | Token and control state |
+| [26 — Lazy terminal routing](26-pr38-lazy-terminal-routing.md) | Prevent eager terminal module loading from defeating lazy routing | 23 | Route/chunk boundary |
+| [27 — Active-page revalidation](27-pr38-active-page-revalidation.md) | Remove extra invisible-page `useJobPage` subscription/polling | 23 | Active/hidden freshness lifecycle |
+| [28 — Bounded public status](28-bounded-public-status.md) | Bound unauthenticated public GET work, service calls, and PAT quota | None | Independent public-resource boundary |
+| [29 — Secure email dispatch](29-secure-email-dispatch.md) | Authorize caller/recipient and enforce durable quotas/replay protection | 01 | Uses implemented/merged quality foundation; 02 is contextual, not a blocker |
+
+The PR #38 findings above are scoped independently from original roadmap tickets. Ticket 29's prerequisite is ticket 01's merged quality foundation; this does **not** assert that broader workflow dispatch ticket 02 has been implemented. Likewise the browser tickets do not mark original ticket 04 or 12 complete. Apply offline fixtures/mocks and avoid real accounts, PAT use, external service calls, workflow dispatch, or mail delivery during verification. The dedicated-ticket branch names in note metadata are convention only; the explicit integration exception is the existing PR #38 branch.
+
 ## Release slices
 
 - **Foundation:** 00–07 establish documentation, reproducible checks, secure requests, M3 foundations, normalized catalog, and full evidence.

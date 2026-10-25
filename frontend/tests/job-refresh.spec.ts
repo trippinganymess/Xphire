@@ -85,6 +85,26 @@ test('failed runs do not claim successful completion', async ({ page, backend })
   await expect(page.getByRole('button', { name: 'REFRESH', exact: true })).toBeEnabled();
 });
 
+test('a failed refresh is reported when the board mounts or is revisited', async ({ page, backend }) => {
+  backend.refreshStatus = 'failed';
+  await page.goto('/#/');
+  await expect(page.getByRole('alert')).toContainText('did not finish successfully');
+
+  await page.getByRole('link', { name: 'TERMINAL ACCESS' }).click();
+  await expect(page.getByText('System ready. Authentication required to continue.')).toBeVisible();
+  await page.getByRole('link', { name: 'Xphire Home' }).click();
+  await expect(page.getByRole('alert')).toContainText('did not finish successfully');
+});
+
+test('a reported failed run keeps its alert semantics on later polls', async ({ page, backend }) => {
+  backend.refreshStatus = 'failed';
+  await page.goto('/#/');
+  await expect(page.getByRole('alert')).toContainText('did not finish successfully');
+
+  await page.clock.runFor(30_000);
+  await expect(page.getByRole('alert')).toContainText('did not finish successfully');
+});
+
 test('dispatch failure is recoverable without losing job results', async ({ page, backend }) => {
   await signIn(page);
   await page.goto('/#/');
