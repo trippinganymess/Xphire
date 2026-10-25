@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { JOB_PAGE_SIZE, useJobPage, type JobFilters } from '../lib/jobCatalog';
 import { useJobRefresh } from '../lib/jobRefresh';
 import './JobBoard.css';
@@ -19,14 +19,6 @@ function formatTimeAgo(dateStr: string): string {
 }
 
 export default function JobBoard() {
-  // Preload the terminal component to reduce initial load latency
-  useEffect(() => {
-    import('./components/SketchTerminal');
-  }, []);
-
-  // Prefetch next page when on the first page
-  // This will keep React hooks order consistent: we compute inside component
-  const _prefetch = useJobPage(filters, page + 1);
   const [{ filters, page }, setQuery] = useState<{ filters: JobFilters; page: number }>({
     filters: { keyword: '', minRating: 'All', freshersOnly: false, source: 'All' },
     page: 1,
