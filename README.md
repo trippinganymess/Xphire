@@ -32,6 +32,7 @@ npm run typecheck && npm run lint && npm run build && npm test
 - **Live Job Board**: Browse recently scraped opportunities in a responsive card-based feed with keyword search, minimum-rating filters, and a freshers-only view.
 - **Hybrid Backfill Pipeline**: Combines fresh live scrapes with top-rated Supabase cached records to guarantee full, high-quality digests.
 - **Neo-Brutalist / Retro Terminal UI**: Interactive sketch terminal interface for search configuration, user profiles, and schedule management.
+- **Google Signup**: Create an account or sign in with Google from the terminal, alongside email/password authentication. See [Google OAuth setup](docs/google-oauth.md) for provider configuration.
 - **Automated 6-Hour Cron**: Background GitHub Actions workflows dispatching scheduled digests directly to subscriber inboxes.
 - **Deduplication Vault**: SHA-256 job hashing in Supabase prevents duplicate listings across runs.
 

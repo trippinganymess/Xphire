@@ -40,6 +40,7 @@ interface WorkflowParams {
 
 type AuthStep =
   | 'MODE_SELECT'
+  | 'GOOGLE_REDIRECT'
   | 'SIGNUP_NAME'
   | 'SIGNUP_EMAIL'
   | 'SIGNUP_PASSWORD'
@@ -48,14 +49,27 @@ type AuthStep =
   | 'SIGNIN_PASSWORD';
 type WorkflowStep = 'IDLE' | 'JOB_TITLE' | 'RECIPIENT_EMAIL' | 'FRESHERS' | 'MIN_STARS' | 'CONFIRM' | 'RUNNING' | 'SCHEDULE_TIME' | 'SCHEDULE_CONFIRM' | 'UNSCHEDULE_CONFIRM';
 
+const authMenuLines = (): TerminalLine[] => {
+  const id = crypto.randomUUID();
+  return [
+    '  [1] Sign Up (Create a new account)',
+    '  [2] Sign In (Log in with existing credentials)',
+    '  [3] Continue with Google (Sign up or sign in)',
+    "  Type 'menu' at any time to choose another method.",
+    ' ',
+  ].map((text, index) => ({ id: `${id}-${index}`, type: 'output', text }));
+};
+
 interface SketchTerminalProps {
   user: UserSession | null;
+  authError?: string | null;
   onLogout: () => void;
   onStatusChange: (status: SystemStatus) => void;
 }
 
 export default function SketchTerminal({
   user,
+  authError,
   onLogout,
   onStatusChange,
 }: SketchTerminalProps) {
@@ -78,6 +92,7 @@ export default function SketchTerminal({
 
   const terminalBodyRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const googlePendingRef = useRef(false);
 
   // Auto-scroll to bottom on output
   useEffect(() => {
@@ -93,6 +108,7 @@ export default function SketchTerminal({
 
   // Initial welcome greeting
   useEffect(() => {
+    googlePendingRef.current = false;
     if (!user) {
       // Reviewed legacy session-driven terminal reset; replace with form state in ticket 05.
       // oxlint-disable-next-line react/set-state-in-effect
@@ -102,13 +118,13 @@ export default function SketchTerminal({
         { id: '3', type: 'header', text: '==================================================' },
         { id: '4', type: 'system', text: 'System ready. Authentication required to continue.' },
         { id: '5', type: 'system', text: 'Please select an option to proceed:' },
-        { id: '6', type: 'output', text: '  [1] Sign Up (Create a new account)' },
-        { id: '7', type: 'output', text: '  [2] Sign In (Log in with existing credentials)' },
-        { id: '8', type: 'output', text: ' ' },
+        ...authMenuLines(),
+        ...(authError ? [{ id: 'auth-error', type: 'error' as const, text: `Sign-in failed: ${authError} Select [3] to retry Google or choose another method.` }] : []),
       ]);
       setAuthStep('MODE_SELECT');
       setAuthDraft({ name: '', email: '', password: '' });
     } else {
+      setAuthStep('MODE_SELECT');
       setLines([
         { id: '1', type: 'header', text: '==================================================' },
         { id: '2', type: 'header', text: '      XPHIRE AI JOB SCOUT - TERMINAL v2.4       ' },
@@ -126,14 +142,16 @@ export default function SketchTerminal({
       });
       setWorkflowStep('IDLE');
     }
-  }, [user]);
+  }, [user, authError]);
 
   // Determine current prompt prefix
   const getPromptLabel = (): string => {
     if (!user) {
       switch (authStep) {
         case 'MODE_SELECT':
-          return 'Select option [1=Sign Up, 2=Sign In]:';
+          return 'Select option [1=Sign Up, 2=Sign In, 3=Google]:';
+        case 'GOOGLE_REDIRECT':
+          return 'Connecting to Google...';
         case 'SIGNUP_NAME':
           return 'Enter your full name:';
         case 'SIGNUP_EMAIL':
@@ -334,9 +352,41 @@ export default function SketchTerminal({
     setWorkflowStep('IDLE');
   };
 
+  const startGoogleAuth = async () => {
+    if (googlePendingRef.current) return;
+    googlePendingRef.current = true;
+    setAuthStep('GOOGLE_REDIRECT');
+    setAuthDraft({ name: '', email: '', password: '' });
+    setLines((prev) => [...prev, {
+      id: crypto.randomUUID(), type: 'system', text: 'Redirecting to Google. Complete authentication in your browser to return to the terminal...',
+    }]);
+
+    try {
+      const redirectTo = new URL(window.location.href);
+      redirectTo.search = '';
+      redirectTo.hash = '/terminal';
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo: redirectTo.href },
+      });
+      if (error) throw error;
+      if (!data.url) throw new Error('No Google authorization URL was returned.');
+    } catch (error: unknown) {
+      googlePendingRef.current = false;
+      setAuthStep('MODE_SELECT');
+      const detail = error instanceof Error ? error.message : 'Unable to connect to Google.';
+      setLines((prev) => [
+        ...prev,
+        { id: crypto.randomUUID(), type: 'error', text: `Google sign-in failed: ${detail}` },
+        ...authMenuLines(),
+      ]);
+      inputRef.current?.focus();
+    }
+  };
+
   const handleCommandSubmit = (e: FormEvent) => {
     e.preventDefault();
-    if (workflowStep === 'RUNNING') return;
+    if (workflowStep === 'RUNNING' || googlePendingRef.current) return;
 
     const trimmed = inputVal.trim();
     const currentPrompt = getPromptLabel();
@@ -365,8 +415,7 @@ export default function SketchTerminal({
       setLines((prev) => [
         ...prev,
         { id: String(Date.now()), type: 'system', text: '\nReturned to authentication menu:' },
-        { id: String(Date.now() + 1), type: 'output', text: '  [1] Sign Up (Create a new account)' },
-        { id: String(Date.now() + 2), type: 'output', text: '  [2] Sign In (Log in with existing credentials)\n' },
+        ...authMenuLines(),
       ]);
       return;
     }
@@ -394,10 +443,13 @@ export default function SketchTerminal({
             { id: String(Date.now()), type: 'system', text: '--- Sign In (Step 1 of 2) ---' },
           ]);
           return;
+        } else if (choice === '3' || choice === 'google') {
+          void startGoogleAuth();
+          return;
         } else {
           setLines((prev) => [
             ...prev,
-            { id: String(Date.now()), type: 'error', text: "Invalid choice. Please enter '1' for Sign Up or '2' for Sign In." },
+            { id: String(Date.now()), type: 'error', text: "Invalid choice. Enter '1' for Sign Up, '2' for Sign In, or '3' / 'google' to continue with Google." },
           ]);
           return;
         }
@@ -470,8 +522,7 @@ export default function SketchTerminal({
               ...prev,
               { id: String(Date.now()), type: 'error', text: `Sign up failed: ${error.message}` },
               { id: String(Date.now() + 1), type: 'system', text: "Returning to authentication menu. Select [2] if you have an account or wish to sign in." },
-              { id: String(Date.now() + 2), type: 'output', text: '  [1] Sign Up (Create a new account)' },
-              { id: String(Date.now() + 3), type: 'output', text: '  [2] Sign In (Log in with existing credentials)\n' },
+              ...authMenuLines(),
             ]);
             setAuthStep('MODE_SELECT');
             setAuthDraft({ name: '', email: '', password: '' });
@@ -489,8 +540,7 @@ export default function SketchTerminal({
               { id: String(Date.now()), type: 'warning', text: `✓ Confirmation email sent to ${authDraft.email}!` },
               { id: String(Date.now() + 1), type: 'system', text: 'Please check your inbox to confirm your email, then select [2] to Sign In.' },
               { id: String(Date.now() + 2), type: 'output', text: ' ' },
-              { id: String(Date.now() + 3), type: 'output', text: '  [1] Sign Up (Create a new account)' },
-              { id: String(Date.now() + 4), type: 'output', text: '  [2] Sign In (Log in with existing credentials)\n' },
+              ...authMenuLines(),
             ]);
             setAuthStep('MODE_SELECT');
             setAuthDraft({ name: '', email: '', password: '' });
@@ -783,7 +833,8 @@ export default function SketchTerminal({
               autoFocus
               spellCheck={false}
               autoComplete="off"
-              disabled={workflowStep === 'RUNNING'}
+              disabled={workflowStep === 'RUNNING' || authStep === 'GOOGLE_REDIRECT'}
+              aria-label={getPromptLabel()}
             />
             <span className="terminal-cursor" aria-hidden="true">█</span>
           </div>

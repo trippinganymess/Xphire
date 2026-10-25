@@ -16,7 +16,7 @@ export async function fetchUserProfile(userId: string): Promise<UserProfile | nu
     .from('users')
     .select('*')
     .eq('id', userId)
-    .single();
+    .maybeSingle();
 
   if (error) {
     console.error('Error fetching user profile:', error);

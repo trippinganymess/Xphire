@@ -1,7 +1,8 @@
 import { test as base, expect } from '@playwright/test';
+import type { Session } from '@supabase/auth-js';
 
 export const NOW = '2026-10-22T12:00:00Z';
-export const session = {
+export const session: Session = {
   access_token: 'offline-access-token', refresh_token: 'offline-refresh-token',
   token_type: 'bearer', expires_in: 3600, expires_at: Date.parse(NOW) / 1000 + 3600,
   user: {
@@ -77,6 +78,9 @@ function matchesTerm(row: ReturnType<typeof job>, term: string): boolean {
 }
 
 export interface MockBackend {
+  authSession: typeof session;
+  userProfile: Record<string, unknown> | null;
+  authTokenStatus: number;
   jobs: ReturnType<typeof job>[];
   refreshStatus: 'idle' | 'started' | 'running' | 'completed' | 'failed';
   refreshRunId: number | undefined;
@@ -92,6 +96,9 @@ export interface MockBackend {
 export const test = base.extend<{ backend: MockBackend }>({
   backend: async ({ context, page }, provide, testInfo) => {
     const backend: MockBackend = {
+      authSession: structuredClone(session),
+      userProfile: { id: session.user.id, name: 'Test Candidate', email: session.user.email, total_runs: 0 },
+      authTokenStatus: 200,
       jobs: [job(), job({ job_id: 'senior', title: 'Senior Analyst', company: 'Beta',
         location: 'Mumbai, India', experience: '5+ Yrs', rating: 2 })],
       refreshStatus: 'idle', refreshRunId: 42, refreshPreviousRunId: undefined,
@@ -114,6 +121,8 @@ export const test = base.extend<{ backend: MockBackend }>({
       if (backend.catalogStatus !== 200 && text.includes(`Failed to load resource: the server responded with a status of ${backend.catalogStatus}`)) return;
       // Refresh failure/retry tests deliberately script HTTP errors.
       if (backend.refreshHttpStatus !== 200 && text.includes(`Failed to load resource: the server responded with a status of ${backend.refreshHttpStatus}`)) return;
+      // OAuth callback failures are deliberately scripted by auth tests.
+      if (backend.authTokenStatus !== 200 && text.includes(`Failed to load resource: the server responded with a status of ${backend.authTokenStatus}`)) return;
       errors.push(text);
     });
     await page.clock.install({ time: new Date(NOW) });
@@ -167,14 +176,17 @@ export const test = base.extend<{ backend: MockBackend }>({
           json: status === 200 ? rows : { message: 'Offline catalog unavailable' } });
       }
       if (url.pathname === '/rest/v1/users' && request.method() === 'GET') {
-        return route.fulfill({ json: { id: session.user.id, name: 'Test Candidate',
-          email: session.user.email, total_runs: 0 } });
+        return route.fulfill({ json: backend.userProfile });
       }
       if (url.pathname === '/auth/v1/token' && request.method() === 'POST') {
-        return route.fulfill({ json: session });
+        return route.fulfill({ status: backend.authTokenStatus, json: backend.authTokenStatus === 200
+          ? backend.authSession : { code: 'flow_state_expired', message: 'OAuth code has expired' } });
+      }
+      if (url.pathname === '/auth/v1/signup' && request.method() === 'POST') {
+        return route.fulfill({ json: backend.authSession });
       }
       if (url.pathname === '/auth/v1/user' && request.method() === 'GET') {
-        return route.fulfill({ json: session.user });
+        return route.fulfill({ json: backend.authSession.user });
       }
       if (url.pathname === '/functions/v1/refresh-jobs') {
         const status = backend.refreshHttpStatus;
