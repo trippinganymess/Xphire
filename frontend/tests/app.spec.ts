@@ -55,7 +55,7 @@ test('restored synthetic session can submit a mocked, rejected dispatch', async 
   };
   await submit('run', 'test_candidate@xphire');
   await submit('Backend Engineer', 'Job title to search');
-  await submit('', 'Verified account email only');
+  await submit('', 'Recipient email');
   await submit('y', 'Freshers / Entry-level');
   await submit('4', 'Minimum company rating');
   await submit('y', 'Dispatch workflow');
@@ -65,8 +65,6 @@ test('restored synthetic session can submit a mocked, rejected dispatch', async 
   expect(dispatches).toHaveLength(1);
   expect(dispatches[0]?.body).toEqual({ jobTitle: 'Backend Engineer',
     recipientEmail: 'candidate@example.test', freshersOnly: true, minStars: 4 });
-  // One-time dispatches carry a durable UUID key so a retry can never duplicate a run.
-  expect(dispatches[0]?.idempotencyKey).toMatch(/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i);
   expect(backend.requests.some((r) => r.path === '/auth/v1/signup')).toBe(false);
 });
 

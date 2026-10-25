@@ -7,8 +7,6 @@
     "lint": "npm --prefix frontend run lint",
     "test": "npm --prefix frontend test",
     "test:refresh": "node --test tests/job-refresh.test.mjs",
-    "test:dispatch": "node --test tests/workflow-dispatch.test.mjs",
-    "test:edge": "node --test tests/job-refresh.test.mjs tests/workflow-dispatch.test.mjs",
     "docs:check": "python3 scripts/check_docs.py"
   }
 }

@@ -64,8 +64,8 @@ export function useJobRefresh(onComplete: () => void) {
     }
     active.current = isActive;
     setRunning(active.current);
+    setError(false);
     if (active.current) {
-      setError(false);
       setMessage(dispatched && status === 'started'
         ? 'Refresh started. Finding new jobs can take about 15 minutes. You can keep browsing.'
         : 'The page is already refreshing. Finding new jobs can take about 15 minutes. You can keep browsing.');
@@ -74,12 +74,7 @@ export function useJobRefresh(onComplete: () => void) {
       setMessage(status === 'failed'
         ? 'The refresh did not finish successfully. You can try again.'
         : 'Refresh complete. The latest jobs are now being loaded.');
-      if (status !== 'failed') complete.current();
-    } else if (status === 'failed') {
-      setError(true);
-      setMessage('The refresh did not finish successfully. You can try again.');
-    } else {
-      setError(false);
+      complete.current();
     }
   }, []);
 
