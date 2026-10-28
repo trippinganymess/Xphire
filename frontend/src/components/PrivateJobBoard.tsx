@@ -66,7 +66,7 @@ function AuthenticatedBoard({ userId, authVersion }: { userId: string; authVersi
     {loading && !data && <p role="status">Checking private access and loading your jobs...</p>}
     {access?.allowed === false && <div className="private-board-access" role="status">
       <h3>Active paid access required</h3>
-      <p>Your administrator must grant access. Expired or revoked access cannot read private jobs.</p>
+      <p>The admin will grant access, once a space opens up.</p>
       <FancyButton to="/private-jobs/request-access">Request access</FancyButton>
       <FancyButton onClick={refresh}>Check access again</FancyButton>
     </div>}
@@ -128,7 +128,6 @@ export default function PrivateJobBoard() {
       <h2 className="job-board-heading">Private Job Board</h2>
       <FancyButton to="/" className="private-board-back">Public Job Board</FancyButton>
     </div>
-    <p>Your personal TheirStack discoveries, visible only to you.</p>
     {!identity.ready ? <p role="status">Checking your session...</p> : !identity.userId
       ? <div className="private-board-access"><h3>Sign in to open PJobB</h3>
         <p>Private jobs are available only to signed-in users with active paid access.</p>

@@ -6,6 +6,7 @@ import FancyButton from './FancyButton';
 import './JobBoard.css';
 
 type WashPhase = 'hidden' | 'enter' | 'rise' | 'out';
+type WashSource = 'refresh' | 'page' | 'none';
 
 export default function JobBoard() {
   const [{ filters, page }, setQuery] = useState<{ filters: JobFilters; page: number }>({
@@ -21,16 +22,29 @@ export default function JobBoard() {
     setQuery((current) => ({ filters: { ...current.filters, ...update }, page: 1 }));
   };
 
-  // Success wash: the paper sweeps light green from the bottom up on REFRESH,
-  // and returns to white once the dispatched action settles.
+  // Sweep wash: the paper sweeps (green for REFRESH, blue for page turns)
+  // bottom-up and returns to white once the settled action completes.
   const [wash, setWash] = useState<WashPhase>('hidden');
+  const [washSource, setWashSource] = useState<WashSource>('none');
   const washTimer = useRef<number | undefined>(undefined);
-  useEffect(() => () => window.clearTimeout(washTimer.current), []);
+  const outTimer = useRef<number | undefined>(undefined);
+  useEffect(() => () => { window.clearTimeout(washTimer.current); window.clearTimeout(outTimer.current); }, []);
 
   function handleRefreshClick() {
     window.clearTimeout(washTimer.current);
+    window.clearTimeout(outTimer.current);
+    setWashSource('refresh');
     setWash('enter');
     void scraper.startRefresh();
+  }
+
+  function handlePage(next: number) {
+    if (next === page) return onPage(next);
+    window.clearTimeout(washTimer.current);
+    window.clearTimeout(outTimer.current);
+    setWashSource('page');
+    setWash('enter');
+    onPage(next);
   }
 
   useEffect(() => {
@@ -39,17 +53,21 @@ export default function JobBoard() {
     return () => window.clearTimeout(id);
   }, [wash]);
 
-  const flowing = scraper.busy || scraper.running;
+  const flowing = washSource === 'refresh' ? (scraper.busy || scraper.running) : loading;
   useEffect(() => {
     if (wash !== 'rise' || flowing) return;
     const id = window.setTimeout(() => {
       setWash('out');
-      washTimer.current = window.setTimeout(() => setWash('hidden'), 900);
+      outTimer.current = window.setTimeout(() => {
+        setWash('hidden');
+        setWashSource('none');
+      }, 1400);
     }, 350);
     return () => window.clearTimeout(id);
   }, [wash, flowing]);
 
   const washClass = ['refresh-wash']
+    .concat(washSource === 'page' ? ['refresh-wash--blue'] : [])
     .concat(wash === 'rise' ? ['refresh-wash--rise'] : [])
     .concat(wash === 'out' ? ['refresh-wash--out'] : [])
     .join(' ');
@@ -70,10 +88,10 @@ export default function JobBoard() {
         {page > 1 && <FancyButton onClick={() => onPage(1)}>First page</FancyButton>}
       </div>}
       {loading && !data && <div className="job-board-empty"><p>System scanning for new jobs...</p></div>}
-      {loading && data && <p className="job-board-feedback">Refreshing jobs...</p>}
+      {loading && data && washSource !== 'page' && <p className="job-board-feedback">Refreshing jobs...</p>}
       <div className="job-board-actions">
         {(data || page > 1) && <JobPagination page={page} pages={pages} total={total} loading={loading}
-          hasData={Boolean(data)} onPage={onPage} />}
+          hasData={Boolean(data)} onPage={handlePage} />}
         <FancyButton
           className="job-board-refresh"
           disabled={scraper.checking || scraper.busy || scraper.running}

@@ -78,13 +78,18 @@
 
 .refresh-wash--rise::before {
   transform: translateY(0);
-  transition: transform 700ms ease-in-out;
+  transition: transform 1200ms ease-in-out;
 }
 
 .refresh-wash--out::before {
   transform: translateY(0);
   opacity: 0;
-  transition: opacity 800ms ease;
+  transition: opacity 1200ms ease;
+}
+
+/* Page turns reuse the same sweep in light blue. */
+.refresh-wash--blue::before {
+  background: linear-gradient(to top, #AED8F5 0%, #DFF2FB 100%);
 }
 
 /* ── Manual scraper refresh ── */
