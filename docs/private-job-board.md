@@ -11,8 +11,8 @@ TheirStack is the only active paid provider. JSearch remains deferred. Its succe
 ## User behaviour
 
 - Guests are directed to Terminal Access to sign in. Signed-in users need active, unexpired, administrator-granted paid access.
-- Paid users read only their own `private_jobs`. Keyword filters apply before 51-row pagination and sort by discovery time and ID. Provider junior/internship labels are a separate, explicitly unverified filter; no fabricated company-star rating is shown.
-- **FIND MY JOBS** accepts one job-title query and sends it to the authenticated `private-job-board` Edge Function. It makes at most one TheirStack request per user per rolling 24 hours, with a 10-job limit and no retries or extra pages.
+- Paid users read only their own `private_jobs`. Saved-job keyword searches wait 400ms after typing stops; controls remain mounted, retain focus, and do not recheck entitlement per keystroke. Filters apply before 51-row pagination and sort by discovery time and ID. Provider junior/internship labels remain explicitly unverified; no fabricated company-star rating is shown.
+- **FIND MY JOBS** accepts a server-enforced discovery preset. Choices include Frontend + Python (default), Frontend, Python, Backend, Full stack, Software engineer, React, Java, QA/testing, and Data analyst. Each maps to bounded job-title alternatives in **one** TheirStack request, not multiple fallback requests. The default reuses the titles from the prior successful connectivity test; **no preset guarantees live vacancies**.
 - This slice is **on-request daily discovery**, not an unattended cron scanner. Entering the route or reloading saved jobs does not consume provider credits. A failed attempt after the durable claim also consumes the daily allowance to prevent ambiguous timeouts from producing duplicate paid requests.
 - Source date-only postings are shown as calendar dates with unknown time. “Found” is Xphire discovery time. Neither junior labels nor one-day provider filters prove fresher/rolling-24-hour eligibility.
 - Account changes, sign-out, revoked access, and failed access checks discard private rows. There is no shared or persisted private-job cache. A mounted page rechecks access every 30 seconds when visible, plus on focus/reload; an already-rendered page cannot be remotely erased instantly, but every new read is protected by RLS.
@@ -70,6 +70,34 @@ The historical live report's nine jobs demonstrate connectivity, not a deployed 
 - The first parallel browser run exposed a transient-loading test race and slow lazy OAuth load. The loading assertion now uses an explicit mock gate instead of a 300ms sleep, and browser assertions allow 10 seconds without automatic retries. The following full parallel run passed; final run evidence is recorded in the PR.
 - Independent subagent review was unavailable: prior provider sessions failed, and the requested NVIDIA Nemotron Ultra review returned 404. These failures produced no review findings; direct checks and tests were used instead.
 
+## Discovery troubleshooting
+
+Database reads returning 200 (`private_jobs`, `private_job_board_access`) do **not** establish that the `private-job-board` Edge Function is deployed or configured. Saved-job filtering only searches existing private rows; it never calls TheirStack or fills an undiscovered board.
+
+The reported typing issue was reproduced with real sequential keystrokes: attempting “Acme” retained only “A” because a filter change cleared access state and unmounted the input. Access polling and job queries are now independent, keyword updates are debounced, and unchanged Supabase sign-in events do not invalidate queries. Account/token changes and failed access checks still fail closed.
+
+For failed discovery, inspect DevTools → Network → `/functions/v1/private-job-board`, not only REST reads. Share HTTP status plus response/code or the network/CORS error; never share authorization headers/cookies/keys.
+
+- **404:** deploy the function in the same Supabase project the frontend uses.
+- **Network/CORS/timeout:** confirm deployment and inspect the browser error/function invocation logs. This is not proof the allowance was or was not consumed.
+- **503 `service_not_configured`:** securely configure the TheirStack secret in Supabase **Edge Functions**, not just Actions.
+- **503 `scan_claim_unavailable` / `private_save_unavailable`:** check migration 004 and service-only RPCs; reload before retrying.
+- **502 `provider_unavailable` / `provider_response_invalid`:** inspect the provider subscription/key/rate limits or function diagnostics without logging raw payloads or secrets.
+- **401/403:** authenticate or check the server-managed entitlement.
+- **409/429:** already running or daily allowance used; do not reset quota merely to hide an error.
+- An invalid HTTP-success body produces a deployed-version mismatch message, not a false success.
+
+The live discovery failure reported by the user has **not** been verified: the supplied network evidence contains successful database reads and canceled access checks, not the function request. These changes make failures distinguishable; a preset cannot repair missing deployment/secrets.
+
+**Rollout:** redeploy `private-job-board` and rebuild/deploy the frontend together so both use `shared/privateDiscoveryPresets.ts`. There is no new database migration in this follow-up. Existing saved jobs/quota are preserved. Deploying the function alone rejects unsupported old free-text queries safely before a paid request; deploy UI promptly to expose the supported choices.
+
+## Follow-up verification (2026-10-28)
+
+- Reproduced the typing bug before the fix: the browser typed `Acme` but the input retained `A`; missing preset and truthful-empty-state tests also failed. All now pass.
+- 76 full mocked browser tests passed (including 4 existing declared expected failures); 26 cover the private board. Focus retention, 400ms debouncing, unsupported queries, missing deployment, invalid success bodies, network failures, zero results, unchanged auth events, and safe setup errors are covered.
+- 127 combined Node handler tests passed; every supported preset was exercised with synthetic job data and exactly one fixed provider request. This is not evidence that every preset has live jobs.
+- Frontend typecheck/lint/build, strict handler/shared-module types, Python 64 passed / 10 known expected failures, Ruff, documentation checker, and diff checks passed. No new paid calls, credentials, production DB access, migration, or function deployment was performed.
+
 ## Offline verification
 
 Use Node 24 and Python 3.11 as described in [quality docs](quality.md):
@@ -78,7 +106,7 @@ Use Node 24 and Python 3.11 as described in [quality docs](quality.md):
 npm run typecheck && npm run lint && npm run build
 (cd frontend && npx playwright test --workers=1)
 node --test tests/job-refresh.test.mjs tests/private-job-board.test.mjs
-(cd frontend && npx tsc --ignoreConfig --noEmit --strict --target ES2022 \
+(cd frontend && npx tsc --ignoreConfig --noEmit --allowImportingTsExtensions --strict --target ES2022 \
   --module nodenext --skipLibCheck ../supabase/functions/private-job-board/handler.ts)
 python -m pytest -q
 python -m ruff check .

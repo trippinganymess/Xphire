@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createServer } from 'node:http';
 import { once } from 'node:events';
+import { PRIVATE_DISCOVERY_PRESETS, privateDiscoveryPreset } from '../shared/privateDiscoveryPresets.ts';
 import { createPrivateJobBoardHandler } from '../supabase/functions/private-job-board/handler.ts';
 
 const config = { supabaseUrl: 'https://supabase.test', serviceKey: 'offline-service-secret', theirStackKey: 'offline-provider-secret' };
@@ -67,7 +68,7 @@ function setup(overrides = {}) {
       assert.equal(url.search, '');
       assert.equal(init.method, 'POST');
       assert.equal(headers.get('authorization'), `Bearer ${config.theirStackKey}`);
-      assert.deepEqual(body, { job_title_or: [state.scans.get(state.user.id).query], job_country_code_or: ['IN'],
+      assert.deepEqual(body, { job_title_or: [...privateDiscoveryPreset(state.scans.get(state.user.id).query).titles], job_country_code_or: ['IN'],
         posted_at_max_age_days: 1, job_seniority_or: ['junior'], employment_statuses_or: ['full_time', 'internship'],
         workplace_types_or: ['remote', 'hybrid', 'on_site'], limit: 10, page: 0 });
       state.providerCalls++;
@@ -181,11 +182,28 @@ for (const body of ['', '{broken', 'null', '[]', '{}', '{"query":null}', '{"quer
   });
 }
 
-test('valid Unicode printable query counts codepoints, not UTF-16 units', async () => {
-  const { state, request } = setup();
-  assert.equal((await request({ query: '🚀'.repeat(120) })).status, 200);
-  assert.equal(state.scans.get(USER).query, '🚀'.repeat(120));
+test('unsupported printable queries are rejected before consuming the allowance', async () => {
+  for (const query of ['🚀'.repeat(120), 'unknown job', 'Frontend Developer', 'constructor']) {
+    const { state, request } = setup();
+    const response = await request({ query });
+    assert.equal(response.status, 400);
+    assert.equal((await response.json()).code, 'invalid_preset');
+    assert.equal(state.scans.size, 0);
+    assert.equal(state.providerCalls, 0);
+  }
 });
+
+for (const preset of PRIVATE_DISCOVERY_PRESETS) {
+  test(`preset ${preset.value} uses fixed title alternatives in exactly one provider request`, async () => {
+    const { state, request } = setup();
+    assert.equal((await request({ query: preset.value })).status, 200);
+    assert.equal(state.providerCalls, 1);
+    const provider = state.requests.find((r) => r.path === '/v1/jobs/search');
+    assert.deepEqual(provider.body.job_title_or, [...preset.titles]);
+    assert.equal(provider.body.limit, 10);
+    assert.equal(provider.body.page, 0);
+  });
+}
 
 test('wrong content type and dishonest/malformed content-length fail before claim', async () => {
   for (const headers of [{ 'Content-Type': 'text/plain' }, { 'Content-Length': '2049' }, { 'Content-Length': '-2' }]) {
@@ -343,6 +361,23 @@ test('failure cleanup outage never refunds quota or leaks error details', async 
   assert.equal(state.providerCalls, 1);
 });
 
+test('discovery failure codes identify setup and save failures without leaking upstream errors', async () => {
+  const cases = [
+    [{ providerThrow: true }, 'provider_unavailable'],
+    [{ payload: { data: {} } }, 'provider_response_invalid'],
+    [{ finishThrow: true }, 'private_save_unavailable'],
+    [{ authStatus: 503 }, 'authentication_unavailable'],
+    [{ rpcOverride: () => new Response('PRIVATE_ERROR', { status: 503 }) }, 'scan_claim_unavailable'],
+  ];
+  for (const [override, code] of cases) {
+    const { request } = setup(override);
+    const response = await request();
+    const result = await response.json();
+    assert.equal(result.code, code);
+    assertSafe(result);
+  }
+});
+
 test('invalid/missing server config fails without any HTTP, no public provider fallback', async () => {
   for (const invalid of [{ theirStackKey: '' }, { theirStackKey: 'bad\nkey' }, { serviceKey: '' },
     { supabaseUrl: 'http://supabase.test' }, { supabaseUrl: 'https://user:pass@supabase.test' }]) {
@@ -409,7 +444,7 @@ test('Deno entrypoint uses canonical key first and trimmed legacy fallback, neve
       await import(`../supabase/functions/private-job-board/index.ts?key=${expected}`);
       assert.equal(typeof served, 'function');
       const response = await served(new Request('https://edge.test', { method: 'POST',
-        headers: { Authorization: 'Bearer verified-user-token', 'Content-Type': 'application/json' }, body: JSON.stringify({ query: 'dev' }) }));
+        headers: { Authorization: 'Bearer verified-user-token', 'Content-Type': 'application/json' }, body: JSON.stringify({ query: 'frontend developer' }) }));
       assert.equal(response.status, 200);
     }
   } finally { globalThis.Deno = oldDeno; globalThis.fetch = oldFetch; }

@@ -118,7 +118,7 @@ jobs:
       - name: Refresh Edge Function offline regressions
         run: node --test ../tests/job-refresh.test.mjs ../tests/private-job-board.test.mjs
       - name: Refresh handler type check
-        run: npx tsc --ignoreConfig --noEmit --strict --target ES2022 --module nodenext --skipLibCheck ../supabase/functions/refresh-jobs/handler.ts ../supabase/functions/private-job-board/handler.ts
+        run: npx tsc --ignoreConfig --noEmit --allowImportingTsExtensions --strict --target ES2022 --module nodenext --skipLibCheck ../supabase/functions/refresh-jobs/handler.ts ../supabase/functions/private-job-board/handler.ts
       - name: Mocked browser regressions
         run: npm test
       - name: Dependency advisories (including build tools)

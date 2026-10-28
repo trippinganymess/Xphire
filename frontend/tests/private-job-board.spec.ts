@@ -76,9 +76,11 @@ test('private keyword filters, provider labels, pagination and page clamping reu
   await page.getByRole('button', { name: 'Next page' }).click();
   await expect(page.getByRole('article')).toHaveCount(2);
   await page.getByLabel('Search jobs').fill('Needle');
+  await page.clock.runFor(450);
   await expect(page.getByRole('article')).toHaveCount(1);
   await expect(page.getByText('Page 1 of 1 · 1 jobs')).toBeVisible();
   await page.getByLabel('Search jobs').fill('');
+  await page.clock.runFor(450);
   await page.getByLabel('Junior / internship (provider label)').check();
   await expect(page.getByText('Page 1 of 2 · 52 jobs')).toBeVisible();
   await page.getByLabel('Junior / internship (provider label)').uncheck();
@@ -95,7 +97,7 @@ test('discovery sends only the chosen query once and reload never calls a paid/p
   backend.privateJobs = [];
   await page.goto('/#/private-jobs');
   await expect(page.getByRole('button', { name: 'FIND MY JOBS' })).toBeEnabled();
-  await page.getByLabel('Job title for your daily discovery').fill('python developer');
+  await page.getByRole('combobox', { name: 'Discovery preset' }).selectOption('python developer');
   await page.getByRole('button', { name: 'FIND MY JOBS' }).click();
   await expect(page.getByText('Discovery complete: 1 jobs saved to your private board.')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Discovered Frontend Engineer' })).toBeVisible();
@@ -220,6 +222,117 @@ test('private cards wrap long content at 200 percent zoom and honour reduced mot
   await page.evaluate(() => { document.documentElement.style.zoom = '2'; });
   expect(await page.locator('.private-job-board').evaluate((element) => element.scrollWidth > element.clientWidth)).toBe(false);
   await expect(page.getByRole('article')).toHaveCSS('transition-duration', '0s');
+});
+
+test('typing a saved-job keyword preserves focus and waits before making a query', async ({ page, backend }) => {
+  await signIn(page);
+  backend.privateAccess.allowed = true;
+  await page.goto('/#/private-jobs');
+  await expect(page.getByRole('article')).toHaveCount(1);
+  const input = page.getByLabel('Search jobs');
+  await input.focus();
+  const before = backend.requests.filter((r) => r.path === '/rest/v1/private_jobs').length;
+  await input.pressSequentially('Acme', { delay: 20 });
+  await expect(input).toHaveValue('Acme');
+  await expect(input).toBeFocused();
+  expect(backend.requests.filter((r) => r.path === '/rest/v1/private_jobs')).toHaveLength(before);
+  await page.clock.runFor(450);
+  await expect.poll(() => backend.requests.filter((r) => r.path === '/rest/v1/private_jobs').length).toBe(before + 1);
+  await expect(input).toBeFocused();
+  expect(backend.requests.filter((r) => r.path === '/functions/v1/private-job-board')).toHaveLength(0);
+});
+
+test('unfiltered empty board explains that discovery has not been run', async ({ page, backend }) => {
+  await signIn(page);
+  backend.privateAccess.allowed = true;
+  backend.privateJobs = [];
+  await page.goto('/#/private-jobs');
+  await expect(page.getByText('No saved jobs yet. Choose a discovery preset and click FIND MY JOBS.')).toBeVisible();
+  await expect(page.getByText('No private jobs match your filters. Try another keyword or use your daily discovery.')).toHaveCount(0);
+});
+
+test('discovery offers presets including the previously successful frontend and Python search', async ({ page, backend }) => {
+  await signIn(page);
+  backend.privateAccess.allowed = true;
+  await page.goto('/#/private-jobs');
+  const select = page.getByRole('combobox', { name: 'Discovery preset' });
+  await expect(select).toHaveValue('frontend and python developer');
+  await select.selectOption('python developer');
+  await page.getByRole('button', { name: 'FIND MY JOBS' }).click();
+  expect(backend.requests.find((r) => r.path === '/functions/v1/private-job-board')?.body).toEqual({ query: 'python developer' });
+});
+
+test('undeployed discovery shows deployment instructions rather than blaming filters', async ({ page, backend }) => {
+  await signIn(page);
+  backend.privateAccess.allowed = true;
+  backend.privateDiscoveryHttpStatus = 404;
+  backend.privateJobs = [];
+  await page.goto('/#/private-jobs');
+  await page.getByRole('button', { name: 'FIND MY JOBS' }).click();
+  await expect(page.getByRole('alert')).toContainText('Private discovery is not deployed');
+  await expect(page.getByRole('alert')).not.toContainText('Unable to confirm discovery');
+  await expect(page.getByText('No saved jobs yet. Choose a discovery preset and click FIND MY JOBS.')).toBeVisible();
+});
+
+test('unusable success response reports deployed-version mismatch without exposing its contents', async ({ page, backend }) => {
+  await signIn(page);
+  backend.privateAccess.allowed = true;
+  await page.route('**/functions/v1/private-job-board', (route) => route.fulfill({ status: 200, json: { status: 'unexpected', secret: 'PRIVATE_BODY' } }));
+  await page.goto('/#/private-jobs');
+  await page.getByRole('button', { name: 'FIND MY JOBS' }).click();
+  await expect(page.getByRole('alert')).toContainText('unexpected response');
+  await expect(page.getByRole('alert')).not.toContainText('PRIVATE_BODY');
+});
+
+test('completed zero-job discovery states availability honestly', async ({ page, backend }) => {
+  await signIn(page);
+  backend.privateAccess.allowed = true;
+  backend.privateJobs = [];
+  backend.privateDiscoveryJobs = [];
+  await page.goto('/#/private-jobs');
+  await page.getByRole('button', { name: 'FIND MY JOBS' }).click();
+  await expect(page.getByText('Discovery completed, but TheirStack returned no jobs for this preset today. No jobs were added; the daily allowance was used.')).toBeVisible();
+  await expect(page.getByText('No jobs were saved by your latest discovery. Live availability varies; check your next discovery time.')).toBeVisible();
+});
+
+test('network discovery failure directs the user to check deployment without automatic retries', async ({ page, backend }) => {
+  await signIn(page);
+  backend.privateAccess.allowed = true;
+  let attempts = 0;
+  await page.route('**/functions/v1/private-job-board', (route) => { attempts++; return route.abort('failed'); });
+  await page.goto('/#/private-jobs');
+  await page.getByRole('button', { name: 'FIND MY JOBS' }).click();
+  await expect(page.getByRole('alert')).toContainText('network, CORS, or timeout');
+  await expect(page.getByRole('alert')).toContainText('Edge Function is deployed');
+  expect(attempts).toBe(1);
+  await expect(page.getByRole('button', { name: 'FIND MY JOBS' })).toBeEnabled();
+});
+
+test('safe server configuration code produces an actionable error', async ({ page, backend }) => {
+  await signIn(page);
+  backend.privateAccess.allowed = true;
+  backend.privateDiscoveryHttpStatus = 503;
+  backend.privateDiscoveryCode = 'service_not_configured';
+  await page.goto('/#/private-jobs');
+  await page.getByRole('button', { name: 'FIND MY JOBS' }).click();
+  await expect(page.getByRole('alert')).toContainText('TheirStack Edge Function secret');
+  await expect(page.getByRole('alert')).not.toContainText('Offline private discovery rejected');
+});
+
+test('same-session sign-in event does not restart the private board', async ({ page, backend }) => {
+  await signIn(page);
+  backend.privateAccess.allowed = true;
+  await page.goto('/#/private-jobs');
+  await expect(page.getByRole('article')).toHaveCount(1);
+  const before = backend.requests.filter((r) => r.path === '/rest/v1/private_jobs').length;
+  await page.evaluate(async () => {
+    const modulePath = '/src/lib/supabase.ts';
+    const { supabase } = await import(modulePath);
+    const { data: { session } } = await supabase.auth.getSession();
+    await supabase.auth._notifyAllSubscribers('SIGNED_IN', session);
+  });
+  await expect(page.getByRole('article')).toHaveCount(1);
+  expect(backend.requests.filter((r) => r.path === '/rest/v1/private_jobs')).toHaveLength(before);
 });
 
 for (const width of [320, 390, 768, 1440]) {

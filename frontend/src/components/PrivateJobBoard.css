@@ -29,7 +29,7 @@
 .private-board-discovery-controls { display: flex; flex-wrap: wrap; gap: 12px; }
 
 .private-job-board button,
-.private-board-discovery input {
+.private-board-discovery select {
   border: 1px solid var(--md-sys-color-primary);
   border-radius: 8px;
   padding: 10px 16px;
@@ -39,7 +39,7 @@
   font: inherit;
 }
 
-.private-board-discovery input { flex: 1; min-width: 0; }
+.private-board-discovery select { flex: 1; min-width: 0; }
 .private-board-discovery button[type='submit'] {
   color: var(--md-sys-color-on-primary);
   background: var(--md-sys-color-primary);
