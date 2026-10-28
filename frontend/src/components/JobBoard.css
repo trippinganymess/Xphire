@@ -48,26 +48,43 @@
   font-family: system-ui, sans-serif;
 }
 
-.job-board-pagination button,
-.job-board-feedback button {
-  padding: 8px 16px;
-  border: var(--sketch-border-sm);
-  border-radius: 8px;
-  background: var(--paper-surface);
-  color: var(--ink-black);
-  font: inherit;
-  cursor: pointer;
+/* Pagination and feedback controls are FancyButton controls. */
+
+/* Inline the pagination inside the actions row: prev · status · next · REFRESH. */
+.job-board-actions .job-board-pagination {
+  margin-block: 0;
 }
 
-.job-board-pagination button:disabled {
-  opacity: 0.5;
-  cursor: default;
+.job-board-pagination .fancy-btn {
+  --fancy-font-size: 1.15rem;
 }
 
-.job-board-pagination button:focus-visible,
-.job-board-feedback button:focus-visible {
-  outline: 2px solid var(--ink-black);
-  outline-offset: 3px;
+/* ── Refresh success wash (paper turns light green bottom → top) ── */
+.refresh-wash {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.refresh-wash::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, #B4EFC1 0%, #DFF8E4 100%);
+  transform: translateY(100%);
+}
+
+.refresh-wash--rise::before {
+  transform: translateY(0);
+  transition: transform 700ms ease-in-out;
+}
+
+.refresh-wash--out::before {
+  transform: translateY(0);
+  opacity: 0;
+  transition: opacity 800ms ease;
 }
 
 /* ── Manual scraper refresh ── */
@@ -80,40 +97,8 @@
   margin-bottom: 24px;
 }
 
-.job-board-refresh,
-.job-board-private-link {
-  padding: 16px 28px;
-  border: 2px solid var(--private-job-container);
-  background: var(--job-board-action-container);
-  color: var(--job-board-action-on-container);
-  box-shadow: 6px 6px 0 var(--ink-black);
-  font-family: var(--font-mono);
-  font-size: 16px;
-  line-height: 1.5;
-  cursor: pointer;
-}
-
-.job-board-refresh { margin-left: auto; }
-
-.job-board-refresh:hover:not(:disabled),
-.job-board-private-link:hover {
-  transform: translate(-2px, -2px);
-}
-
-.job-board-refresh:focus-visible,
-.job-board-private-link:focus-visible {
-  outline: 3px solid var(--ink-black);
-  outline-offset: 4px;
-}
-
-.job-board-refresh:disabled {
-  opacity: 0.7;
-  cursor: default;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .job-board-refresh:hover:not(:disabled),
-  .job-board-private-link:hover { transform: none; }
+.job-board-refresh {
+  margin-left: auto;
 }
 
 .job-board-refresh-status {

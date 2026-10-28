@@ -67,19 +67,19 @@ html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background: var(--paper-bg);
+  background-image:
+    radial-gradient(#E4E4E7 1px, transparent 1px);
+  background-size: 24px 24px;
 }
 
 body {
   font-family: var(--font-hand);
-  background: var(--paper-bg);
+  background: transparent;
   color: var(--ink-black);
   min-height: 100vh;
   display: flex;
   flex-direction: column;
   line-height: 1.5;
-  background-image: 
-    radial-gradient(#E4E4E7 1px, transparent 1px);
-  background-size: 24px 24px;
 }
 
 #root {

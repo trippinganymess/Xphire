@@ -1,0 +1,407 @@
+@import url("https://fonts.googleapis.com/css2?family=Hubballi&display=swap");
+
+/* ===================================================================
+   CONFIRM / DECLINE EMAIL DIALOG - adapted from confirm_or_decline_email_code.md
+   Full-viewport choice: hover floods a pill with color, choosing bursts
+   a circle across the screen, then settles.
+   =================================================================== */
+
+.confirm-email-dialog {
+  --db: #0a1347;
+  --bg: #f5e8df;
+  --r: #e1504a;
+  --expo: cubic-bezier(1, 0, 0, 1);
+  --elastic: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+
+  position: fixed;
+  inset: 0;
+  z-index: 400;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  background: var(--bg);
+  color: var(--db);
+  font-family: "Hubballi", sans-serif;
+  font-weight: 900;
+  overflow: hidden;
+}
+
+.confirm-email-dialog__filters {
+  position: absolute;
+  width: 0;
+  height: 0;
+}
+
+.confirm-email-dialog__container {
+  text-align: center;
+  transform: translateY(-5vw);
+}
+
+.confirm-email-dialog__question {
+  font-size: 6vw;
+  text-transform: uppercase;
+  color: var(--db);
+  margin: 0 0 5vw;
+  display: inline-block;
+  position: relative;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.confirm-email-dialog__question::before {
+  content: "";
+  position: absolute;
+  width: 90vw;
+  height: 22.5vw;
+  top: 3.5vw;
+  box-shadow: 0 0 0 0.5vw var(--db), 0 2.5vw 0 -0.5vw var(--db);
+  left: calc(50% - 45vw);
+  z-index: -2;
+}
+
+.confirm-email-dialog__question::after {
+  content: "";
+  position: absolute;
+  width: 125%;
+  height: 125%;
+  background: var(--bg);
+  left: -12.5%;
+  top: -12.5%;
+  z-index: -1;
+}
+
+.confirm-email-dialog__buttons {
+  display: flex;
+  justify-content: space-between;
+  width: 80vw;
+}
+
+/* ── Hover reveal: hovering the row shrinks pills, hovering one floods it ── */
+.confirm-email-dialog__buttons:hover .confirm-email-dialog__btnwrap {
+  width: 30%;
+}
+.confirm-email-dialog__buttons:hover .confirm-email-dialog__btnwrap > .confirm-email-dialog__reveal {
+  font-size: 3.5vw;
+}
+.confirm-email-dialog__buttons .confirm-email-dialog__btnwrap:hover {
+  width: 60%;
+}
+.confirm-email-dialog__buttons:hover .confirm-email-dialog__btnwrap:hover > .confirm-email-dialog__reveal {
+  font-size: 5vw;
+}
+.confirm-email-dialog__buttons:hover .confirm-email-dialog__btnwrap:hover .char::before {
+  transform: scaleY(0);
+  transition: transform 0.3s var(--expo) 0s;
+  transform-origin: top;
+}
+.confirm-email-dialog__buttons:hover .confirm-email-dialog__btnwrap:hover ~ .confirm-email-dialog__btnwrap {
+  width: 30%;
+}
+.confirm-email-dialog__buttons:hover .confirm-email-dialog__btnwrap:hover ~ .confirm-email-dialog__btnwrap > .confirm-email-dialog__reveal {
+  font-size: 3.5vw;
+}
+
+/* ── Choice pills ── */
+.confirm-email-dialog__btnwrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 47.5%;
+  position: relative;
+  height: 8.5vw;
+  transition: 0.4s ease-in-out;
+  transform: translateZ(0px);
+}
+
+.confirm-email-dialog__btnwrap::before {
+  content: "";
+  position: absolute;
+  width: 200vw;
+  height: 200vw;
+  border-radius: 100%;
+  background: var(--db);
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%) translateZ(0px) scale(0);
+  transition: transform 1s var(--expo);
+}
+
+.confirm-email-dialog__btnwrap:last-of-type > .confirm-email-dialog__reveal {
+  background: repeating-linear-gradient(
+    45deg,
+    var(--r) 0.25vw,
+    var(--bg) 0.25vw,
+    var(--bg) 1.5vw,
+    var(--r) 1.5vw,
+    var(--r) 1.75vw
+  );
+}
+
+.confirm-email-dialog__btnwrap:last-of-type > .confirm-email-dialog__reveal .char {
+  position: relative;
+}
+
+.confirm-email-dialog__btnwrap:last-of-type > .confirm-email-dialog__reveal .char::before {
+  content: "";
+  position: absolute;
+  width: 100%;
+  height: 50%;
+  top: 25%;
+  background: var(--bg);
+  z-index: -1;
+  transition: transform 0.3s var(--elastic) 0.4s;
+  transform-origin: bottom;
+}
+
+/* The real, focusable buttons sit invisibly on top of the visual pills. */
+.confirm-email-dialog__btnwrap button,
+.confirm-email-dialog__btnwrap > .confirm-email-dialog__reveal {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  top: 0;
+  left: 0;
+  z-index: 9;
+  cursor: pointer;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+}
+
+.confirm-email-dialog__btnwrap > .confirm-email-dialog__reveal {
+  z-index: 8;
+  opacity: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  letter-spacing: 0.5vw;
+  text-transform: uppercase;
+  font-size: 4vw;
+  line-height: 1;
+  text-align: center;
+  color: var(--db);
+  box-shadow: 0 0 0 0.5vw var(--db), 0 0 0 1vw var(--bg);
+  background: var(--bg);
+  border-radius: 50vmin;
+  overflow: hidden;
+}
+
+.confirm-email-dialog__btnwrap:first-of-type {
+  --r: var(--bg);
+}
+
+.confirm-email-dialog__btnwrap:first-of-type > .confirm-email-dialog__reveal::after {
+  content: "✓";
+}
+
+.confirm-email-dialog__btnwrap:last-of-type > .confirm-email-dialog__reveal::after {
+  content: "✗";
+}
+
+.confirm-email-dialog__btnwrap > .confirm-email-dialog__reveal::after {
+  position: absolute;
+  width: 4vw;
+  height: 4vw;
+  color: var(--db);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+  font-size: 2.5vw;
+  left: 1vw;
+  border-radius: 100%;
+  z-index: 9;
+  transform: translateX(-200%) rotate(360deg);
+  transition: 0.3s var(--elastic);
+}
+
+.confirm-email-dialog__btnwrap > .confirm-email-dialog__reveal::before {
+  content: "";
+  position: absolute;
+  width: 50vw;
+  height: 50vw;
+  top: 0;
+  left: 50%;
+  background: var(--db);
+  transform: scaleY(0) translate(-50%, 0) translateZ(0px);
+  transform-origin: bottom;
+  transition: transform 0.4s ease-in-out 0.2s,
+    border-radius 0.8s ease-in-out,
+    background 0.8s ease-in-out;
+  border-radius: 100vw;
+}
+
+.confirm-email-dialog__btnwrap--confirm > .confirm-email-dialog__reveal > span {
+  filter: url(#xphire-warp-left);
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  line-height: 1;
+  transition: 0.5s ease-in-out;
+}
+
+.confirm-email-dialog__btnwrap--cancel > .confirm-email-dialog__reveal > span {
+  filter: url(#xphire-warp-right);
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  line-height: 1;
+  transition: 0.5s ease-in-out;
+}
+
+.confirm-email-dialog__reveal .word {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  justify-content: center;
+}
+
+.confirm-email-dialog__reveal .char {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  transition: transform 0.5s var(--expo)
+    calc((var(--char-total) - var(--char-index)) * 0.035s);
+  top: 0%;
+  transform: translateY(0%) translateZ(0px);
+}
+
+.confirm-email-dialog__reveal .char::after {
+  content: attr(data-char);
+  position: absolute;
+  top: 100%;
+  left: 0;
+  color: var(--bg);
+  height: 100%;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── Flood on hover of the invisible real buttons ── */
+.confirm-email-dialog__btnwrap button:hover ~ .confirm-email-dialog__reveal::before {
+  transform-origin: top;
+  transform: scaleY(1) translate(-50%, 0) translateZ(0px);
+  transition: transform 0.4s ease-in-out,
+    background 0.4s ease-in-out 0.4s;
+  border-radius: 0;
+  background: var(--r);
+}
+
+.confirm-email-dialog__btnwrap--confirm button:hover ~ .confirm-email-dialog__reveal::before {
+  background: var(--db);
+}
+
+.confirm-email-dialog__btnwrap button:hover ~ .confirm-email-dialog__reveal::after {
+  transform: translateX(0);
+  transition-delay: 0.4s;
+}
+
+.confirm-email-dialog__btnwrap button:hover ~ .confirm-email-dialog__reveal .char {
+  transform: translateY(-100%) translateZ(0px);
+  transition: transform 0.5s var(--expo)
+      calc((var(--char-index) + 4) * 0.05s),
+    color 0.4s ease-in-out;
+  color: var(--r);
+}
+
+/* ── Burst: the chosen pill expands over the whole viewport, then reverts ── */
+.confirm-email-dialog--burst-confirm .confirm-email-dialog__btnwrap:first-of-type,
+.confirm-email-dialog--burst-confirm .confirm-email-dialog__buttons:hover .confirm-email-dialog__btnwrap:first-of-type {
+  width: 8.5vw;
+  transform: translateX(calc(40vw - 4.25vw));
+  z-index: 9;
+}
+
+.confirm-email-dialog--burst-confirm .confirm-email-dialog__btnwrap:first-of-type::before {
+  transform: translate(-50%, -50%) translateZ(0px) scale(1);
+}
+
+.confirm-email-dialog--burst-confirm .confirm-email-dialog__btnwrap:first-of-type > .confirm-email-dialog__reveal::before {
+  transform: translateY(100%);
+}
+
+.confirm-email-dialog--burst-confirm .confirm-email-dialog__btnwrap:first-of-type > .confirm-email-dialog__reveal::after {
+  transform: translateX(1.5vw);
+  transition-delay: 0s;
+}
+
+.confirm-email-dialog--burst-confirm .confirm-email-dialog__btnwrap:first-of-type .confirm-email-dialog__reveal .char {
+  transform: translateY(-200%);
+}
+
+.confirm-email-dialog--burst-confirm .confirm-email-dialog__btnwrap:nth-of-type(2) {
+  transition: 0.4s var(--expo);
+  transform: translateX(200vw);
+  width: 0;
+}
+
+.confirm-email-dialog--burst-cancel .confirm-email-dialog__btnwrap:last-of-type,
+.confirm-email-dialog--burst-cancel .confirm-email-dialog__buttons:hover .confirm-email-dialog__btnwrap:last-of-type {
+  width: 8.5vw;
+  transform: translateX(calc(-40vw + 4.25vw));
+  z-index: 9;
+}
+
+.confirm-email-dialog--burst-cancel .confirm-email-dialog__btnwrap:last-of-type::before {
+  transform: translate(-50%, -50%) translateZ(0px) scale(1);
+  background: var(--r);
+}
+
+.confirm-email-dialog--burst-cancel .confirm-email-dialog__btnwrap:last-of-type > .confirm-email-dialog__reveal::before {
+  transform: translateY(100%);
+}
+
+.confirm-email-dialog--burst-cancel .confirm-email-dialog__btnwrap:last-of-type > .confirm-email-dialog__reveal::after {
+  transform: translateX(1.5vw);
+  color: var(--r);
+  transition-delay: 0s;
+}
+
+.confirm-email-dialog--burst-cancel .confirm-email-dialog__btnwrap:last-of-type .confirm-email-dialog__reveal .char {
+  transform: translateY(-200%);
+}
+
+.confirm-email-dialog--burst-cancel .confirm-email-dialog__btnwrap:first-of-type {
+  transition: 0.4s var(--expo);
+  transform: translateX(-200vw);
+  width: 0;
+}
+
+/* Keyboard focusring: the real buttons are invisible, so expose focus. */
+.confirm-email-dialog__btnwrap:has(> button:focus-visible) > .confirm-email-dialog__reveal {
+  box-shadow: 0 0 0 0.5vw var(--db), 0 0 0 0.9vw var(--r);
+}
+
+.confirm-email-dialog__btnwrap button:focus {
+  outline: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .confirm-email-dialog,
+  .confirm-email-dialog .confirm-email-dialog__btnwrap,
+  .confirm-email-dialog .confirm-email-dialog__btnwrap::before,
+  .confirm-email-dialog .confirm-email-dialog__reveal,
+  .confirm-email-dialog .confirm-email-dialog__reveal::before,
+  .confirm-email-dialog .confirm-email-dialog__reveal::after,
+  .confirm-email-dialog .confirm-email-dialog__reveal .char,
+  .confirm-email-dialog .confirm-email-dialog__reveal .char::before,
+  .confirm-email-dialog .confirm-email-dialog__reveal .char::after,
+  .confirm-email-dialog .confirm-email-dialog__reveal > span {
+    transition: none;
+  }
+}
