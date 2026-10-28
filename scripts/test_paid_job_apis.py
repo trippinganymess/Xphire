@@ -198,9 +198,9 @@ def redact(value: Any, secrets: list[str]) -> Any:
     if isinstance(value, list):
         return [redact(item, secrets) for item in value]
     if isinstance(value, str):
-        for secret in secrets:
-            if secret:
-                value = value.replace(secret, "[REDACTED]")
+        # Drop the whole diagnostic instead of mixing key material into output.
+        if any(secret and secret in value for secret in secrets):
+            return "[REDACTED]"
         # Upstream JSON may contain lone surrogates; reports must remain UTF-8.
         return " ".join(value.split())[:256].encode("utf-8", errors="replace").decode("utf-8")
     return value

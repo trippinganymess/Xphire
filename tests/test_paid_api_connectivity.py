@@ -150,6 +150,12 @@ class ConnectivityTests(unittest.TestCase):
         self.assertEqual(len(opener.requests), 2)
         self.assertNotIn("PRIVATE_PARTIAL_BODY", json.dumps(report))
 
+    def test_secret_bearing_diagnostic_is_replaced_in_full(self):
+        self.assertEqual(
+            api.redact("prefix offline-jsearch suffix", list(ENV.values())),
+            "[REDACTED]",
+        )
+
     def test_redaction_output_is_utf8_serializable(self):
         value = {"job_title": "bad\ud800title"}
         sanitized = api.redact(value, [])
