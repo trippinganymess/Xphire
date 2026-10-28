@@ -2,6 +2,8 @@
   color: var(--md-sys-color-on-surface);
   font-family: system-ui, sans-serif;
   line-height: 1.6;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .private-job-board > p { margin-bottom: 24px; }
@@ -26,7 +28,8 @@
 
 .private-board-discovery label { display: block; font-weight: 600; margin-bottom: 8px; }
 .private-board-discovery p { margin-top: 12px; }
-.private-board-discovery-controls { display: flex; flex-wrap: wrap; gap: 12px; }
+.private-board-discovery-controls { display: flex; flex-wrap: wrap; gap: 12px; min-width: 0; width: 100%; }
+.private-board-discovery-controls > * { min-width: 0; max-width: 100%; }
 
 .private-job-board button,
 .private-board-discovery select {
@@ -39,14 +42,14 @@
   font: inherit;
 }
 
-.private-board-discovery select { flex: 1; min-width: 0; }
+.private-board-discovery select { flex: 1; width: 100%; min-width: 0; }
 .private-board-discovery button[type='submit'] {
   color: var(--md-sys-color-on-primary);
   background: var(--md-sys-color-primary);
 }
 .private-job-board button { cursor: pointer; }
 .private-job-board button:disabled { cursor: default; opacity: 0.6; }
-.private-job-board :is(button, input, a):focus-visible {
+.private-job-board :is(button, input, select, textarea, a):focus-visible {
   outline: 3px solid var(--md-sys-color-primary);
   outline-offset: 3px;
 }
@@ -60,6 +63,31 @@
 .private-job-board .job-board-filter-input,
 .private-job-board .job-board-freshers-label { font-family: inherit; }
 .private-board-note { color: var(--md-sys-color-on-surface-variant); margin-bottom: 16px; }
+
+.private-board-access > :is(a, button) { display: inline-block; margin: 12px 16px 0 0; }
+.private-access-request { max-width: 720px; margin-inline: auto; }
+.private-access-form { display: flex; flex-direction: column; gap: 12px; }
+.private-access-form label { font-weight: 600; }
+.private-access-form :is(input, textarea) {
+  width: 100%;
+  min-width: 0;
+  padding: 12px 16px;
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: 8px;
+  background: var(--md-sys-color-surface);
+  color: var(--md-sys-color-on-surface);
+  font: inherit;
+}
+.private-access-form textarea { resize: vertical; }
+.private-access-form input[readonly] { color: var(--md-sys-color-on-surface-variant); }
+.private-access-form .private-board-note { margin-bottom: 4px; }
+.private-access-form button[type='submit'] {
+  background: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+  align-self: flex-start;
+  max-width: 100%;
+  margin: 8px 0 0;
+}
 
 .private-job-board .job-board-grid {
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));

@@ -28,7 +28,12 @@ test('PJobB is beside Latest Opportunities and guests cannot request private job
   await expect(page.getByRole('heading', { name: 'Latest Opportunities' })).toBeVisible();
   const button = page.getByRole('link', { name: 'PJobB', exact: true });
   await expect(button).toHaveAttribute('href', '#/private-jobs');
-  await expect(button).toHaveCSS('background-color', 'rgb(194, 229, 148)');
+  const refresh = page.getByRole('button', { name: 'REFRESH', exact: true });
+  for (const property of ['background-color', 'color', 'border-top-color', 'border-top-width', 'border-top-style',
+    'padding', 'font-family', 'font-size', 'line-height', 'box-shadow']) {
+    const value = await refresh.evaluate((element, name) => getComputedStyle(element).getPropertyValue(name), property);
+    await expect(button).toHaveCSS(property, value);
+  }
   await button.click();
   await expect(page.getByRole('heading', { name: 'Private Job Board' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Sign in to open PJobB' })).toBeVisible();
@@ -137,6 +142,40 @@ test('revoked paid access and unavailable access checks clear private cards', as
   await expect(page.getByRole('alert')).toContainText('Unable to load your private board');
   await expect(page.getByRole('article')).toHaveCount(0);
 });
+
+for (const denial of ['revoked', 'unavailable'] as const) {
+  test(`${denial} access discards old rows until a fresh authorized read completes`, async ({ page, backend }) => {
+    await signIn(page);
+    backend.privateAccess.allowed = true;
+    await page.goto('/#/private-jobs');
+    await expect(page.getByRole('heading', { name: 'Private Junior Engineer' })).toBeVisible();
+    if (denial === 'revoked') backend.privateAccess.allowed = false;
+    else backend.privateAccessHttpStatus = 503;
+    await page.getByRole('button', { name: 'Reload board' }).click();
+    const retry = denial === 'revoked'
+      ? page.getByRole('button', { name: 'Check access again' })
+      : page.getByRole('button', { name: 'Retry', exact: true });
+    await expect(retry).toBeVisible();
+    await expect(page.getByRole('article')).toHaveCount(0);
+
+    backend.privateAccess.allowed = true;
+    backend.privateAccessHttpStatus = 200;
+    backend.privateJobs = [privateJob({ job_id: 'replacement', title: 'Fresh authorized job' })];
+    let release!: () => void;
+    backend.privateCatalogGate = new Promise<void>((resolve) => { release = resolve; });
+    const before = backend.requests.filter((r) => r.path === '/rest/v1/private_jobs').length;
+    try {
+      await retry.click();
+      await expect.poll(() => backend.requests.filter((r) => r.path === '/rest/v1/private_jobs').length).toBeGreaterThan(before);
+      await expect(page.getByRole('article')).toHaveCount(0);
+    } finally {
+      release();
+      backend.privateCatalogGate = null;
+    }
+    await expect(page.getByRole('heading', { name: 'Fresh authorized job' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Private Junior Engineer' })).toHaveCount(0);
+  });
+}
 
 test('invalid apply URL never becomes an active link', async ({ page, backend }) => {
   await signIn(page);

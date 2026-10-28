@@ -2,7 +2,7 @@
 
 ## Implementation and deployment status
 
-The feature branch implements a green **PJobB** link beside **Latest Opportunities**, opening `#/private-jobs` with cyan job cards. Public and private boards share card, filter, and pagination presentation. The public `Seen_job` query/cache and scraper refresh remain separate from private data and discovery.
+The **PJobB** link beside **Latest Opportunities** shares the **REFRESH** button's colors, border, typography, spacing, shadow, and interaction styles. It opens `#/private-jobs` with cyan job cards. Public and private boards share card, filter, and pagination presentation.
 
 **Not deployed:** the migration and Edge Function must be reviewed and applied before the feature works on a live Supabase project. Tests use fake credentials, synthetic users, mocked provider traffic, and disposable PostgreSQL; no new live API calls or production database changes were made.
 
@@ -10,12 +10,12 @@ TheirStack is the only active paid provider. JSearch remains deferred. Its succe
 
 ## User behaviour
 
-- Guests are directed to Terminal Access to sign in. Signed-in users need active, unexpired, administrator-granted paid access.
+- Guests are directed to Terminal Access to sign in. Signed-in users need active, unexpired, administrator-granted paid access. Guests and users awaiting access can open the [request access page](private-job-access-requests.md); submitting requires a verified account email.
 - Paid users read only their own `private_jobs`. Saved-job keyword searches wait 400ms after typing stops; controls remain mounted, retain focus, and do not recheck entitlement per keystroke. Filters apply before 51-row pagination and sort by discovery time and ID. Provider junior/internship labels remain explicitly unverified; no fabricated company-star rating is shown.
 - **FIND MY JOBS** accepts a server-enforced discovery preset. Choices include Frontend + Python (default), Frontend, Python, Backend, Full stack, Software engineer, React, Java, QA/testing, and Data analyst. Each maps to bounded job-title alternatives in **one** TheirStack request, not multiple fallback requests. The default reuses the titles from the prior successful connectivity test; **no preset guarantees live vacancies**.
 - This slice is **on-request daily discovery**, not an unattended cron scanner. Entering the route or reloading saved jobs does not consume provider credits. A failed attempt after the durable claim also consumes the daily allowance to prevent ambiguous timeouts from producing duplicate paid requests.
 - Source date-only postings are shown as calendar dates with unknown time. “Found” is Xphire discovery time. Neither junior labels nor one-day provider filters prove fresher/rolling-24-hour eligibility.
-- Account changes, sign-out, revoked access, and failed access checks discard private rows. There is no shared or persisted private-job cache. A mounted page rechecks access every 30 seconds when visible, plus on focus/reload; an already-rendered page cannot be remotely erased instantly, but every new read is protected by RLS.
+- Account changes, sign-out, revoked access, and failed access checks discard private rows. After access recovers, old rows remain absent until a fresh authorized jobs query completes. There is no shared or persisted private-job cache. A mounted page rechecks access every 30 seconds when visible, plus on focus/reload; every new read is protected by RLS.
 - Jobs are retained across successful daily queries, upserted per owner/provider ID. Revocation hides retained jobs; reactivation restores reads. Account deletion cascades private records.
 
 The header account menu no longer clips Sign Out; its action revokes the SDK session as well as clearing the header label. This existing bug is fixed because private-board privacy must not depend on a cosmetic logout. New account-menu interaction supports keyboard activation and visible focus through existing button rules.

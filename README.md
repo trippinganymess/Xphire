@@ -27,7 +27,7 @@ npm run typecheck && npm run lint && npm run build && npm test
 
 ## Private paid job discovery (connectivity gate)
 
-The [PJobB private board](docs/private-job-board.md) is implemented on the feature branch: a green **PJobB** entry beside **Latest Opportunities**, cyan per-user job cards, shared board filtering/pagination presentation, administrator-granted paid entitlements, and server-side TheirStack discovery limited to one request per user per 24 hours. Private jobs never enter the public catalog or scraper. Supabase migration/function deployment and entitlement provisioning are required; this PR does not deploy them or add an unattended scanner.
+The [PJobB private board](docs/private-job-board.md) has an entry beside **Latest Opportunities** styled like **REFRESH**, cyan per-user job cards, administrator-granted access, and TheirStack discovery limited to one request per user per 24 hours. The [access request page](docs/private-job-access-requests.md) sends administrator notifications to **recblackoff@gmail.com** through the existing SMTP setup. Supabase migrations/function deployment and the notification workflow are required before sending live requests.
 
 The isolated [connectivity gate](docs/paid-job-discovery.md) checks **TheirStack only**; JSearch remains deferred. The prior authorized run returned HTTP 200 with nine parseable TheirStack jobs. The private implementation has offline coverage, not a new live scan.
 

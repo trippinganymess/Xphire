@@ -11,18 +11,7 @@
 .job-board-heading-row .job-board-heading { margin-bottom: 0; }
 
 .job-board-private-link {
-  background: var(--pjb-entry-container);
-  color: var(--pjb-entry-on-container);
-  border: 2px solid var(--ink-black);
-  border-radius: 8px;
-  padding: 12px 24px;
-  font: 700 16px var(--font-mono);
   text-decoration: none;
-}
-
-.job-board-private-link:focus-visible {
-  outline: 3px solid var(--md-sys-color-primary);
-  outline-offset: 4px;
 }
 
 .job-board {
@@ -91,23 +80,28 @@
   margin-bottom: 24px;
 }
 
-.job-board-refresh {
-  margin-left: auto;
+.job-board-refresh,
+.job-board-private-link {
   padding: 16px 28px;
-  border: 2px solid var(--cyan-neon);
-  background: #49182b;
-  color: #c2e594;
+  border: 2px solid var(--private-job-container);
+  background: var(--job-board-action-container);
+  color: var(--job-board-action-on-container);
   box-shadow: 6px 6px 0 var(--ink-black);
   font-family: var(--font-mono);
   font-size: 16px;
+  line-height: 1.5;
   cursor: pointer;
 }
 
-.job-board-refresh:hover:not(:disabled) {
+.job-board-refresh { margin-left: auto; }
+
+.job-board-refresh:hover:not(:disabled),
+.job-board-private-link:hover {
   transform: translate(-2px, -2px);
 }
 
-.job-board-refresh:focus-visible {
+.job-board-refresh:focus-visible,
+.job-board-private-link:focus-visible {
   outline: 3px solid var(--ink-black);
   outline-offset: 4px;
 }
@@ -115,6 +109,11 @@
 .job-board-refresh:disabled {
   opacity: 0.7;
   cursor: default;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .job-board-refresh:hover:not(:disabled),
+  .job-board-private-link:hover { transform: none; }
 }
 
 .job-board-refresh-status {

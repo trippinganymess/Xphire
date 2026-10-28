@@ -136,6 +136,10 @@ export interface MockBackend {
   privateDiscoveryGate: Promise<void> | null;
   privateDiscoveryJobs: ReturnType<typeof privateJob>[];
   privateNextAllowedAt: string;
+  accessRequestHttpStatus: number;
+  accessRequestStatus: 'queued' | 'already_allowed';
+  accessRequestCode: string | null;
+  accessRequestGate: Promise<void> | null;
   requests: { method: string; path: string; body: unknown; query: string; authorization: string | null }[];
 }
 
@@ -156,7 +160,9 @@ export const test = base.extend<{ backend: MockBackend }>({
       privateCatalogStatus: 200, privateCatalogGate: null,
       privateDiscoveryHttpStatus: 200, privateDiscoveryCode: null, privateDiscoveryGate: null,
       privateDiscoveryJobs: [privateJob({ job_id: 'discovered', title: 'Discovered Frontend Engineer' })],
-      privateNextAllowedAt: '2026-10-23T12:00:00Z', requests: [],
+      privateNextAllowedAt: '2026-10-23T12:00:00Z',
+      accessRequestHttpStatus: 202, accessRequestStatus: 'queued', accessRequestCode: null, accessRequestGate: null,
+      requests: [],
     };
     const unexpected: string[] = [];
     const errors: string[] = [];
@@ -249,6 +255,16 @@ export const test = base.extend<{ backend: MockBackend }>({
           ? { status: 'completed', jobsSaved: saved.length, nextAllowedAt }
           : { error: 'Offline private discovery rejected', nextAllowedAt,
             ...(backend.privateDiscoveryCode ? { code: backend.privateDiscoveryCode } : {}) } });
+      }
+      if (url.pathname === '/functions/v1/request-private-access' && request.method() === 'POST') {
+        const status = backend.accessRequestHttpStatus;
+        const result = backend.accessRequestStatus;
+        const gate = backend.accessRequestGate;
+        if (gate) await gate;
+        noteHttpStatus(status);
+        return route.fulfill({ status, json: status < 400
+          ? { status: result, requestId: '30000000-0000-0000-0000-000000000001', nextAllowedAt: backend.privateNextAllowedAt }
+          : { code: backend.accessRequestCode ?? 'request_storage_unavailable' } });
       }
       if (url.pathname === '/rest/v1/users' && request.method() === 'GET') {
         return route.fulfill({ json: backend.userProfile });

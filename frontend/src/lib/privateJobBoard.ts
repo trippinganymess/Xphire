@@ -1,33 +1,37 @@
 import { useCallback, useEffect, useReducer, useState } from 'react';
+import type { User } from '@supabase/auth-js';
 import { JOB_PAGE_SIZE, keywordPattern, type Job, type JobFilters } from './jobCatalog';
 import { fetchWithSession, functionsUrl, supabase } from './supabase';
 
-interface Identity { ready: boolean; userId: string | null; version: number }
+interface Identity { ready: boolean; userId: string | null; email: string; name: string; version: number }
 interface Access { allowed: boolean; next_allowed_at: string | null; last_status: string | null; last_query: string | null }
 interface AccessState { identity: string; value: Access | null; loading: boolean; error: string | null; generation: number }
 interface PageState { key: string; loading: boolean; error: string | null; data: { jobs: Job[]; total: number } | null }
 
 export function usePrivateIdentity(): Identity {
-  const [identity, setIdentity] = useState<Identity>({ ready: false, userId: null, version: 0 });
+  const [identity, setIdentity] = useState<Identity>({ ready: false, userId: null, email: '', name: '', version: 0 });
   useEffect(() => {
     let active = true;
     let version = 0;
     let lastIdentity: string | undefined;
-    const apply = (userId: string | null, token = '') => {
+    const apply = (authUser: User | null | undefined, token = '') => {
+      const user = authUser && !authUser.is_anonymous ? authUser : null;
+      const userId = user?.id ?? null;
       const current = JSON.stringify([userId, token]);
       if (!active || lastIdentity === current) return;
       lastIdentity = current;
       version++;
-      setIdentity({ ready: true, userId, version });
+      const name: unknown = user?.user_metadata?.name ?? user?.user_metadata?.full_name;
+      setIdentity({ ready: true, userId, email: user?.email ?? '', name: typeof name === 'string' ? name : '', version });
     };
     const initialVersion = version;
     void supabase.auth.getSession().then(({ data: { session } }) => {
-      if (active && version === initialVersion) apply(session?.user && !session.user.is_anonymous ? session.user.id : null, session?.access_token);
+      if (active && version === initialVersion) apply(session?.user, session?.access_token);
     }).catch(() => { if (active && version === initialVersion) apply(null); });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       // Supabase may emit SIGNED_IN again on focus: unchanged identity/token
       // must not cancel queries or remount inputs. Real account/token changes do.
-      apply(session?.user && !session.user.is_anonymous ? session.user.id : null, session?.access_token);
+      apply(session?.user, session?.access_token);
     });
     return () => { active = false; subscription.unsubscribe(); };
   }, []);
@@ -40,6 +44,7 @@ export function usePrivateJobPage(userId: string, filters: JobFilters, page: num
   const [revision, refresh] = useReducer((value: number) => value + 1, 0);
   const identity = JSON.stringify([userId, authVersion]);
   const [accessState, setAccess] = useState<AccessState>({ identity: '', value: null, loading: true, error: null, generation: 0 });
+  const [snapshot, setSnapshot] = useState<PageState>({ key: '', loading: true, error: null, data: null });
   useEffect(() => {
     let active = true;
     let pending = false;
@@ -62,10 +67,16 @@ export function usePrivateJobPage(userId: string, filters: JobFilters, page: num
         const { data, error } = await supabase.rpc('private_job_board_access').retry(false)
           .abortSignal(AbortSignal.any([controller.signal, AbortSignal.timeout(15_000)]));
         if (error || !data || typeof data.allowed !== 'boolean') throw new Error('Access check unavailable');
-        if (active) setAccess((previous) => ({ identity, value: data, loading: false, error: null, generation: previous.generation + 1 }));
+        if (active) {
+          if (!data.allowed) setSnapshot({ key: '', loading: false, error: null, data: null });
+          setAccess((previous) => ({ identity, value: data, loading: false, error: null, generation: previous.generation + 1 }));
+        }
       } catch {
-        if (active) setAccess((previous) => ({ identity, value: null, loading: false,
-          error: 'Unable to load your private board. Please retry.', generation: previous.generation + 1 }));
+        if (active) {
+          setSnapshot({ key: '', loading: false, error: null, data: null });
+          setAccess((previous) => ({ identity, value: null, loading: false,
+            error: 'Unable to load your private board. Please retry.', generation: previous.generation + 1 }));
+        }
       } finally {
         pending = false;
         if (active) schedule();
@@ -86,7 +97,6 @@ export function usePrivateJobPage(userId: string, filters: JobFilters, page: num
 
   const access = accessState.identity === identity ? accessState.value : null;
   const key = JSON.stringify([identity, filters.keyword.trim(), filters.freshersOnly, page]);
-  const [snapshot, setSnapshot] = useState<PageState>({ key: '', loading: true, error: null, data: null });
   const allowed = access?.allowed === true;
   useEffect(() => {
     if (!allowed) return;

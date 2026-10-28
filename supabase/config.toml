@@ -2,6 +2,10 @@
 # Every request verifies the token with Supabase Auth; no public GET endpoint.
 verify_jwt = false
 
+[functions.request-private-access]
+# The handler verifies a non-anonymous Auth user and confirmed email on every POST.
+verify_jwt = false
+
 [functions.dispatch-workflow]
 verify_jwt = false
 

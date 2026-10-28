@@ -67,6 +67,7 @@ function AuthenticatedBoard({ userId, authVersion }: { userId: string; authVersi
     {access?.allowed === false && <div className="private-board-access" role="status">
       <h3>Active paid access required</h3>
       <p>Your administrator must grant access. Expired or revoked access cannot read private jobs.</p>
+      <Link to="/private-jobs/request-access">Request access</Link>
       <button type="button" onClick={refresh}>Check access again</button>
     </div>}
     {access?.allowed && <>
@@ -132,6 +133,7 @@ export default function PrivateJobBoard() {
       ? <div className="private-board-access"><h3>Sign in to open PJobB</h3>
         <p>Private jobs are available only to signed-in users with active paid access.</p>
         <Link to="/terminal">Sign in through Terminal Access</Link>
+        <Link to="/private-jobs/request-access">Request access</Link>
       </div>
       : <AuthenticatedBoard key={identity.userId} userId={identity.userId} authVersion={identity.version} />}
   </section>;
