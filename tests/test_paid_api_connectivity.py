@@ -383,8 +383,8 @@ class ConnectivityTests(unittest.TestCase):
                  patch("sys.stdout", new_callable=io.StringIO):
                 self.assertEqual(api.main(), 1)
             self.assertEqual(json.loads(report_path.read_text())["requests_made"], 0)
-            self.assertIn("missing_secrets", summary_path.read_text())
             self.assertIn("Configure both secrets", summary_path.read_text())
+            self.assertIn("nonempty printable ASCII tokens", summary_path.read_text())
 
 
 if __name__ == "__main__":
