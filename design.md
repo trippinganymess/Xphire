@@ -163,6 +163,12 @@ The historical baseline above remains unchanged as a record of commit `587df22`.
 
 This is a deliberate loading-performance exception to the sequencing of full ticket 12. It does not claim M3 migration, verified eligibility/lifecycle, normalized discovery semantics, or digest parity. Existing shell styling remains until ticket 04; new feedback/navigation uses semantic tokens, wrapping controls, and keyboard focus without introducing a third palette.
 
+### 6.2 PJobB private-board slice (2026-10-28)
+
+The user explicitly requested reuse of existing board behaviour with a green **PJobB** entry and cyan private listings. This is a scoped extension, not a full public-board M3 migration. Public queries/cache/scraper behaviour remain unchanged; shared card/filter/pagination presentation is extracted for reuse.
+
+The feature branch adds `#/private-jobs`, service-managed paid entitlements, own-user paid-only RLS, and on-request TheirStack discovery once per user per rolling 24 hours. New private controls use centralized M3 roles; the requested cyan card and green entry accents are centralized app tokens in `index.css`, with dark text, rather than new scattered palette literals. No rating, fresher certainty, precise posting timestamp, scheduled scan, or deployed private database is claimed. See [implementation/deployment notes](docs/private-job-board.md).
+
 ## 7. V2 visual direction: Material Design 3
 
 ### 7.1 Decision and consistency rules

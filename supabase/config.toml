@@ -1,3 +1,7 @@
+[functions.private-job-board]
+# Every request verifies the token with Supabase Auth; no public GET endpoint.
+verify_jwt = false
+
 [functions.dispatch-workflow]
 verify_jwt = false
 

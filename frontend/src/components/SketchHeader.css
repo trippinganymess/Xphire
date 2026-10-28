@@ -17,7 +17,7 @@
   margin-bottom: 28px;
   user-select: none;
   box-sizing: border-box;
-  overflow: hidden;
+  overflow: visible;
 }
 
 /* ── Square Corner Boxes (Logo & PFP) ── */
@@ -45,6 +45,9 @@
   cursor: default;
   overflow: hidden;
 }
+
+.sketch-header__pfp.open { overflow: visible; }
+.sketch-header__pfp.open:hover { transform: none; }
 
 .sketch-header__pfp--clickable {
   cursor: pointer;

@@ -1,6 +1,6 @@
 # Private paid job discovery: TheirStack connectivity gate
 
-**Status: TheirStack live connectivity verified; JSearch deferred by user request.** The Private Job Board, database integration, and paid daily scanner are not implemented. The active connectivity gate now checks **TheirStack only**; JSearch is not a prerequisite and receives no requests or credentials.
+**Status: TheirStack live connectivity verified; JSearch deferred by user request.** The [PJobB feature](private-job-board.md) now implements a separate private board, service-managed paid entitlements, private tables/RLS, and on-request per-user daily discovery on the feature branch. It is not deployed; an unattended scanner is not implemented. The active connectivity gate checks **TheirStack only**; JSearch is not a prerequisite and receives no requests or credentials.
 
 This is an isolated, manual-only probe. It does not change the public scraper, its workflows, tables, email pipeline, or frontend. No Supabase credentials are needed.
 
@@ -100,8 +100,6 @@ Coverage includes TheirStack-only selection even when JSearch variables exist, c
 
 ## Private-board continuation
 
-The requested **PJobB** button belongs beside **Latest Opportunities** at the upper right of the public board. It will navigate to a separate authenticated **Private Job Board** with cyan job listings, backed by TheirStack alone for now. The button and private board are not implemented by this gate-only change.
+The **PJobB** link is implemented beside **Latest Opportunities**, navigating to `#/private-jobs` with cyan cards. Paid entitlement comes from an administrator-managed table, not an editable profile or email subscription. The [private-board deployment notes](private-job-board.md) describe RLS, on-request discovery, quota rules, and the separate deployment steps; implementation in a PR is not live deployment verification.
 
-Do not reuse the shared catalog as private results or trigger the public scraper. Paid eligibility and authenticated own-user access must be enforced server-side; button visibility is not authorization. Before integration, establish the authoritative paid entitlement, handling of uncertain/`needs_review` matches, and daily coverage under provider budgets.
-
-The public pipeline's `SUPABASE_SERVICE_KEY` must be preserved. The later schema/RLS, production adapter/validator/repository, paid daily workflow, and private frontend still need separate implementation and verification. No private-user scan or scheduled paid scan has run.
+The public pipeline's `SUPABASE_SERVICE_KEY` remains unchanged. Richer preferences, verified fresher/precise freshness matching, uncertain-job review, and an unattended daily scanner remain future work. No production private-user scan or scheduled paid scan has run.

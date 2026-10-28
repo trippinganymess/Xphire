@@ -27,7 +27,9 @@ npm run typecheck && npm run lint && npm run build && npm test
 
 ## Private paid job discovery (connectivity gate)
 
-The isolated, manual-only [API connectivity gate](docs/paid-job-discovery.md) now checks **TheirStack only**; JSearch is deferred by user request. It accepts `THEIR_STACK_API_KEY` or the canonical `THEIRSTACK_API_KEY` Actions secret and makes one request without retries. TheirStack returned HTTP 200 with nine parseable jobs in the authorized live run; the historical two-provider workflow failed because JSearch returned 404. The revised single-provider probe has offline coverage but has not been rerun live. Private-job database integration, the paid daily scanner, and the **PJobB** button/cyan private board are not implemented; the public pipeline is unchanged.
+The [PJobB private board](docs/private-job-board.md) is implemented on the feature branch: a green **PJobB** entry beside **Latest Opportunities**, cyan per-user job cards, shared board filtering/pagination presentation, administrator-granted paid entitlements, and server-side TheirStack discovery limited to one request per user per 24 hours. Private jobs never enter the public catalog or scraper. Supabase migration/function deployment and entitlement provisioning are required; this PR does not deploy them or add an unattended scanner.
+
+The isolated [connectivity gate](docs/paid-job-discovery.md) checks **TheirStack only**; JSearch remains deferred. The prior authorized run returned HTTP 200 with nine parseable TheirStack jobs. The private implementation has offline coverage, not a new live scan.
 
 ---
 
