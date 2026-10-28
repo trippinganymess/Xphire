@@ -1,4 +1,30 @@
 /* ── Job Board Layout ── */
+.job-board-heading-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.job-board-heading-row .job-board-heading { margin-bottom: 0; }
+
+.job-board-private-link {
+  background: var(--pjb-entry-container);
+  color: var(--pjb-entry-on-container);
+  border: 2px solid var(--ink-black);
+  border-radius: 8px;
+  padding: 12px 24px;
+  font: 700 16px var(--font-mono);
+  text-decoration: none;
+}
+
+.job-board-private-link:focus-visible {
+  outline: 3px solid var(--md-sys-color-primary);
+  outline-offset: 4px;
+}
+
 .job-board {
   width: 100%;
 }

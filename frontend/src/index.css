@@ -15,6 +15,19 @@
   --ink-light:        #A1A1AA;
   --border-sketch:    #121214;
 
+  /* Private-board additions: M3 roles plus approved cyan/green app accents. */
+  --md-sys-color-primary: #6750A4;
+  --md-sys-color-on-primary: #FFFFFF;
+  --md-sys-color-surface: #FEF7FF;
+  --md-sys-color-surface-container: #F3EDF7;
+  --md-sys-color-on-surface: #1D1B20;
+  --md-sys-color-on-surface-variant: #49454F;
+  --md-sys-color-outline-variant: #CAC4D0;
+  --private-job-container: #80E5ED;
+  --private-job-on-container: #121214;
+  --pjb-entry-container: #C2E594;
+  --pjb-entry-on-container: #121214;
+
   /* ── Indicator Lights ── */
   --bulb-green:       #00E676;
   --bulb-green-glow:  rgba(0, 230, 118, 0.6);

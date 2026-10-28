@@ -98,6 +98,15 @@ export default function SketchHeader({
         <div
           className={`sketch-header__box sketch-header__pfp ${onLogout ? 'sketch-header__pfp--clickable' : ''} ${showPfpDropdown ? 'open' : ''}`}
           onClick={togglePfpDropdown}
+          role={onLogout ? 'button' : undefined}
+          tabIndex={onLogout ? 0 : undefined}
+          aria-expanded={onLogout ? showPfpDropdown : undefined}
+          aria-label={onLogout ? 'Account menu' : undefined}
+          onKeyDown={(event) => {
+            if (!onLogout || event.target !== event.currentTarget) return;
+            if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); togglePfpDropdown(); }
+            if (event.key === 'Escape') setShowPfpDropdown(false);
+          }}
           title={userName ? `Logged in as ${userName} (${userEmail})${onLogout ? ' - Click for menu' : ''}` : 'Guest Agent'}
         >
           {avatarUrl ? (

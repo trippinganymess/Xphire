@@ -1,78 +1,62 @@
-# Private paid job discovery: connectivity gate
+# Private paid job discovery: TheirStack connectivity gate
 
-**Status: waiting for gate-only PR review and live verification.** The API secret names are now present in repository Actions secrets. No live request has been made as part of this continuation, and mocked tests are not live-connectivity evidence. The Private Job Board (PJB), database integration, and paid daily scanner remain gated.
+**Status: TheirStack live connectivity verified; JSearch deferred by user request.** The [PJobB feature](private-job-board.md) now implements a separate private board, service-managed paid entitlements, private tables/RLS, and on-request per-user daily discovery on the feature branch. It is not deployed; an unattended scanner is not implemented. The active connectivity gate checks **TheirStack only**; JSearch is not a prerequisite and receives no requests or credentials.
 
-This change adds an isolated, manual-only probe. It does not change the public scraper, its workflows, tables, email pipeline, or frontend. No Supabase credentials are needed.
+This is an isolated, manual-only probe. It does not change the public scraper, its workflows, tables, email pipeline, or frontend. No Supabase credentials are needed.
+
+## Verified evidence and scope change
+
+[PR #41](https://github.com/trippinganymess/Xphire/pull/41) was merged with user authorization. The authorized [live run on 2026-10-28](https://github.com/trippinganymess/Xphire/actions/runs/40676405432) produced:
+
+| Provider | HTTP status | Jobs returned / normalized | Result |
+| --- | --- | --- | --- |
+| TheirStack | 200 | 9 / 9 | Valid JSON and parseable job data; provider connectivity passed |
+| JSearch (previous direct-service request) | 404 | Not available | Failed; subsequently deferred |
+
+The historical workflow failed overall because its old policy required both providers. **The user subsequently selected TheirStack alone**, superseding that two-provider prerequisite. TheirStack's successful live result remains valid evidence; the revised single-provider probe has been tested offline, not rerun live. Do not describe the historical workflow as successful or diagnose the JSearch secret from an unauthenticated local request.
+
+All nine TheirStack jobs had a usable apply URL through the existing `url` fallback; none supplied `final_url`. Posting dates were date-only, so **zero reliable UTC posting instants** were established. Those limitations must be addressed before claiming rolling-24-hour production eligibility. Connectivity is not paid entitlement, fresher validation, or an end-to-end private-user scan.
 
 ## Credentials
 
-The workflow accepts canonical secret names and the aliases already configured in `trippinganymess/Xphire`:
-
 | Provider | Canonical Actions secret | Existing repository alias |
 | --- | --- | --- |
-| OpenWeb Ninja JSearch | `JSEARCH_API_KEY` | `X_API_KEY` |
 | TheirStack | `THEIRSTACK_API_KEY` | `THEIR_STACK_API_KEY` |
 
-Canonical names take precedence when supplied. There is no need to rename existing secrets. On 2026-10-28, secret-name inspection confirmed both aliases in repository Actions secrets; it did not retrieve or verify their values. Neither canonical name appeared, and the `copilot` environment had no secret names.
+The canonical name takes precedence when nonempty. No secret needs renaming. `JSEARCH_API_KEY`, `X_API_KEY`, and `X_RAPIDAPI_KEY` are not read by the probe or injected by its workflow; JSearch is deferred, not silently used as a fallback.
 
-Keys belong in **Settings → Secrets and variables → Actions**, never frontend variables. If replacing a key, use GitHub's UI or the CLI's hidden prompt; never put a key directly in a shell command or paste it into logs/chat:
+Keys belong in **Settings → Secrets and variables → Actions**, never frontend variables. To replace a key, use GitHub's UI or the CLI's hidden prompt; do not place a key in a shell command, logs, or chat:
 
 ```bash
-gh secret set X_API_KEY --repo trippinganymess/Xphire
 gh secret set THEIR_STACK_API_KEY --repo trippinganymess/Xphire
 ```
 
-GitHub cannot return stored secret values. The script does not read `.env` or retrieve GitHub secrets. Both providers' keys must be configured before **any** live request is made; missing or invalid header tokens fail preflight with zero requests. Missing-secret diagnostics use the canonical names above.
+GitHub cannot return stored secret values. The script does not read `.env` or retrieve GitHub secrets. A missing, blank, or invalid header token fails preflight with **zero requests**. Invalid canonical tokens do not fall back to an alias.
 
-## Review and execute the live gate
+## Review and execute the gate
 
-The isolated workflow is [Xphire Paid Job API Connectivity](../.github/workflows/paid_api_connectivity.yml). It has only `workflow_dispatch`, read-only repository permissions, and no Supabase access. It runs offline probe tests before introducing API secrets, then sends exactly one request per provider, without retries or extra pages.
+The workflow remains [Xphire Paid Job API Connectivity](../.github/workflows/paid_api_connectivity.yml), preserving its filename for existing links and dispatch commands. It has only `workflow_dispatch`, read-only repository permissions, and no Supabase access. Offline tests run before secrets are introduced, followed by **one request to TheirStack**, without retries or extra pages.
 
-**The user selected a gate-only PR. Do not merge it or execute live requests without subsequent confirmation.** Only the probe workflow, script, tests, and documentation belong in that PR, not unrelated OAuth or other local work.
+Keep gate changes separate from OAuth or other local work. Merging, dispatching, and live requests require user authorization. No new live request is necessary merely to remove JSearch; the successful TheirStack evidence above is retained.
 
-GitHub requires a `workflow_dispatch` workflow to exist on the default branch before it can be dispatched. After the gate-only PR is reviewed, merged into `main`, and live execution is authorized, use Actions → **Xphire Paid Job API Connectivity** → **Run workflow**, or:
+For a separately authorized live rerun after the revised workflow is reviewed and merged into `main`, use Actions → **Xphire Paid Job API Connectivity** → **Run workflow**, or:
 
 ```bash
 gh workflow run paid_api_connectivity.yml --repo trippinganymess/Xphire --ref main
-gh run list --repo trippinganymess/Xphire --workflow paid_api_connectivity.yml --limit 1
-# Inspect the chosen run's summary/log and download its sanitized report if needed.
-gh run view RUN_ID --repo trippinganymess/Xphire --log
+gh run view RUN_ID --repo trippinganymess/Xphire
 gh run download RUN_ID --repo trippinganymess/Xphire \
   --name paid-api-connectivity-report --dir /tmp/xphire-paid-api-evidence
 ```
 
-The script's nonzero exit status fails the workflow when either provider fails the gate. The artifact step uses `if: always()` so it still retains a generated failure report; it does **not** mask the probe failure. The report is printed as sanitized JSON, included in the Actions step summary, and retained for seven days. Do not upload raw API payloads.
+The nonzero probe exit status fails the workflow if TheirStack fails. The artifact step uses `if: always()` to retain a generated failure report; it does not mask that failure. Sanitized JSON is printed, included in the Actions summary, and retained for seven days. Never upload raw API payloads.
 
-For separately authorized local testing only, with both keys already securely supplied to the process environment:
+For separately authorized local testing only, with the TheirStack key securely supplied to the process environment:
 
 ```bash
 python3.11 scripts/test_paid_job_apis.py --report /tmp/xphire-paid-api-report.json
 ```
 
-## Exact requests and diagnostics
-
-These are the selected request forms to verify, not evidence that either provider has passed the gate.
-
-### JSearch (OpenWeb Ninja)
-
-`POST https://api.openwebninja.com/jsearch/search-v2`, with `x-api-key` and `Content-Type: application/json`:
-
-```json
-{
-  "query": "frontend developer jobs in India",
-  "country": "in",
-  "date_posted": "today",
-  "num_pages": 1
-}
-```
-
-The probe reports HTTP status, jobs returned/normalized, field presence and populated counts, usable apply-link count, and reliable UTC timestamp count. Inspected fields include `job_id`, `job_apply_is_direct`, `apply_options`, `job_posted_at_datetime_utc`, `job_location`, `job_description`, `job_title`, employer fields, and city/state/country fields. Missing `job_location` may be filled from city/state/country in the tentative in-memory format.
-
-Estimated usage: one search request. Exact vendor credit debit is not established by this probe. `num_pages: 1` is retained to match the requested test body; its effective behavior on `search-v2` remains unverified. Diagnostics report only top-level pagination-field presence (`cursor`, `next_cursor`, `next_page`), never cursor values. No cursor is followed and no default page or effective pagination behavior is claimed.
-
-`date_posted: "today"` alone is not proof of rolling-24-hour eligibility. Production validation must check reliable timestamps independently.
-
-### TheirStack
+## Exact TheirStack request and diagnostics
 
 `POST https://api.theirstack.com/v1/jobs/search`, with bearer authentication and `Content-Type: application/json`:
 
@@ -89,35 +73,33 @@ Estimated usage: one search request. Exact vendor credit debit is not establishe
 }
 ```
 
-The probe reports HTTP status, jobs in `data`, and for each job only `id`, `job_title`, `company`, `country_code`, `date_posted`, `seniority`, `final_url_exists`, and `company_object_employee_count_exists`. It also reports `metadata.total_results` when supplied and the allowlisted `RateLimit`, `RateLimit-Limit`, `RateLimit-Remaining`, and `RateLimit-Reset` headers when present.
+The report retains `sources.theirstack` and records HTTP status, jobs returned/normalized, usable apply-link count, and reliable UTC timestamp count. Per-job fields are limited to `id`, `job_title`, `company`, `country_code`, `date_posted`, `seniority`, `final_url_exists`, and `company_object_employee_count_exists`. `metadata.total_results` is reported if supplied.
 
-Under the requested billing rule, **one successful request uses one API credit**, whether it returns zero, one, or ten jobs. Each additional successful request/page costs another credit. HTTP 200 records one estimated credit even if JSON parsing subsequently fails. This is request-based accounting, not independent billing-statement verification. The probe does not request `include_total_results: true` and does not retry HTTP 429. Bounded, rate-aware retries belong to the later production scanner.
+Only `RateLimit-Limit`, `RateLimit-Remaining`, and `RateLimit-Reset` are logged. The combined `RateLimit` header is deliberately omitted because it can contain an account partition identity.
 
-Date-only or timezone-free `date_posted` values are reported as unreliable UTC timestamps, not invented midnight posting instants.
+Under the selected billing rule, **one successful request uses one estimated API credit**, whether it returns zero, one, or ten jobs. HTTP 200 records one estimated credit even if JSON parsing later fails; this is request-based accounting, not independent billing-statement verification. The probe does not request `include_total_results: true`, follow another page, or retry HTTP 429. Rate-aware retries belong to the later production scanner.
 
 ## Passing criteria and safety
 
-The process exits successfully only when **both** responses have HTTP 200, valid JSON, a nonempty `data` array, and job objects that normalize into the complete proposed internal shape with a nonempty title. An empty array is schema-parseable but cannot prove job normalization, so the gate remains closed. Missing optional fields are reported rather than fabricated.
+The revised process passes only when **TheirStack** returns HTTP 200, valid JSON, a nonempty `data` array, and job objects that normalize into the complete proposed internal shape with nonempty titles. Empty or partially malformed arrays fail. Missing optional fields produce warnings, not fabricated values.
 
-The tentative normalizer keeps `raw_payload` and descriptions **in memory only**, never in the report. It removes tracking parameters, hashes normalized title/company/cleaned apply URL, and sets `validation.passed: false` with a connectivity-only reason. It is not the production validator or source adapter; skills/company size/experience/salary/location mappings still require refinement against real responses. API filtering is not proof of fresher compatibility.
+The tentative normalizer retains descriptions and `raw_payload` **in memory only**, never in the report. It cleans tracking parameters, hashes normalized title/company/apply URL, and sets `validation.passed: false` with a connectivity-only reason. It is not a production adapter or validator. Date-only and naive timestamps do not become invented midnight posting instants.
 
-No API keys, full descriptions, raw response bodies, exception details, or non-allowlisted headers are logged. Allowlisted upstream strings are redacted against all configured secret aliases, whitespace-normalized, length-limited, and made UTF-8 serializable. Summary text cannot escape its fenced JSON block. Response reads are bounded; malformed/deep JSON, truncated HTTP responses, and UTC-conversion overflow fail safely. Redirects cannot forward API credentials to another host. If one request fails, the other is still attempted, and the overall gate fails.
+No keys, full descriptions, raw response bodies, exception details, or non-allowlisted headers are logged. A diagnostic string containing any configured TheirStack key is replaced in full with `[REDACTED]`; other allowlisted strings are whitespace-normalized, length-limited, and made UTF-8 serializable. Summary text cannot escape its fenced JSON block. Reads are bounded, malformed/deep/truncated responses fail safely, and redirects cannot forward credentials to another host.
 
 ## Offline regression tests
 
-These use only the Python standard library and synthetic in-memory HTTP responses. They make no live requests and need no credentials:
+These use only synthetic in-memory HTTP responses and require no credentials. An unexpected attempt to construct a live HTTP opener fails the standalone tests:
 
 ```bash
 python3.11 -m unittest discover -s tests -p test_paid_api_connectivity.py -v
 python3.11 scripts/check_docs.py
 ```
 
-Coverage includes exact requests, canonical/legacy secret precedence, missing/invalid-secret preflight, normalized shape, cleaned-URL/hash behavior, timestamp uncertainty and overflow, optional/malformed fields, per-request credit accounting, empty/non-JSON/deep/oversized/truncated responses, independent API failures, secret redaction, safe CLI reports/summaries, workflow failure propagation, and redirect rejection.
+Coverage includes TheirStack-only selection even when JSearch variables exist, canonical/legacy precedence, missing/invalid-token preflight, exact request shape, URL/hash behavior, uncertain/overflowing timestamps, optional/malformed fields, request-based credit accounting, malformed/deep/oversized/truncated responses, no retries, secret/header redaction, safe CLI reports, workflow failure propagation, and redirect rejection.
 
-## Private-board entry point and continuation
+## Private-board continuation
 
-The user confirmed **PJB**, beside **Latest Opportunities** at the upper right of the public board, as the entry point to the **Private Job Board**. After the live gate passes, add separate authenticated navigation to the user's private matches. It must not filter or reuse the shared catalog as if it were private, or trigger the public scraper. Paid eligibility and authenticated own-user access must be enforced server-side; button visibility alone is not authorization. The button is not implemented ahead of the gate.
+The **PJobB** link is implemented beside **Latest Opportunities**, navigating to `#/private-jobs` with cyan cards. Paid entitlement comes from an administrator-managed table, not an editable profile or email subscription. The [private-board deployment notes](private-job-board.md) describe RLS, on-request discovery, quota rules, and the separate deployment steps; implementation in a PR is not live deployment verification.
 
-Before full implementation, clarify authoritative paid entitlement, handling of `needs_review` jobs without polluting the valid-only board, and daily coverage when due users exceed batch/provider budgets.
-
-The later scanner will require `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and both API keys as Actions secrets. The public pipeline currently uses `SUPABASE_SERVICE_KEY`; preserve it rather than renaming it. The **Xphire Paid Daily Job Scan** workflow, schema/RLS, production adapters/validator/repository, and private frontend have not been implemented or verified. No end-to-end private-user scan or scheduled paid scan has run.
+The public pipeline's `SUPABASE_SERVICE_KEY` remains unchanged. Richer preferences, verified fresher/precise freshness matching, uncertain-job review, and an unattended daily scanner remain future work. No production private-user scan or scheduled paid scan has run.

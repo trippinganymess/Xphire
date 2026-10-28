@@ -101,11 +101,15 @@ test('a public page older than five minutes is not displayed as cached data', as
   await expect(page.getByText('System ready. Authentication required to continue.')).toBeVisible();
   await page.clock.runFor(5 * 60_000 + 100);
   backend.jobs = [job({ title: 'Fresh after expiry' })];
-  backend.catalogDelay = true;
-  await page.getByRole('link', { name: 'Xphire Home' }).click();
-  await expect(page.getByText('System scanning for new jobs...')).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Junior Engineer' })).toHaveCount(0);
-  await expect(page.getByRole('heading', { name: 'Fresh after expiry' })).toBeVisible();
+  let release = () => {};
+  backend.catalogGate = new Promise<void>((resolve) => { release = resolve; });
+  try {
+    await page.getByRole('link', { name: 'Xphire Home' }).click();
+    await expect(page.getByText('System scanning for new jobs...')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Junior Engineer' })).toHaveCount(0);
+    release();
+    await expect(page.getByRole('heading', { name: 'Fresh after expiry' })).toBeVisible();
+  } finally { release(); }
 });
 
 test('the public cache evicts old query pages rather than growing without bound', async ({ page, backend }) => {

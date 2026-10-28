@@ -9,9 +9,10 @@ export interface Job {
   experience: string;
   salary: string;
   source: string;
-  rating: number;
+  rating: number | null;
   scraped_at: string;
   url: string;
+  posted_date?: string | null;
 }
 
 export interface JobFilters {
@@ -32,7 +33,7 @@ interface JobPage {
 // Quote PostgREST grammar characters and escape regular-expression syntax.
 // IMATCH preserves literal substring search even for '*', which PostgREST
 // treats as a wildcard alias in LIKE/ILIKE expressions.
-function keywordPattern(keyword: string): string {
+export function keywordPattern(keyword: string): string {
   return JSON.stringify(keyword.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
 }
 

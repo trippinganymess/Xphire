@@ -8,6 +8,7 @@ import { fetchUserProfile } from './lib/userService';
 import './App.css';
 
 const SketchTerminal = lazy(() => import('./components/SketchTerminal'));
+const PrivateJobBoard = lazy(() => import('./components/PrivateJobBoard'));
 
 // A wrapper component that passes the current route down to the header
 function AppLayout() {
@@ -75,6 +76,8 @@ function AppLayout() {
     setUser(null);
     setAuthError(null);
     setSystemStatus('online');
+    // Header sign-out must revoke the SDK session as well as its UI label.
+    void supabase.auth.signOut();
   };
 
   return (
@@ -93,6 +96,9 @@ function AppLayout() {
       <main className="sketch-app-main">
         <Routes>
           <Route path="/" element={<JobBoard />} />
+          <Route path="/private-jobs" element={
+            <Suspense fallback={<p role="status">Loading private board...</p>}><PrivateJobBoard /></Suspense>
+          } />
           <Route 
             path="/terminal" 
             element={

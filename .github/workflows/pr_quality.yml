@@ -61,6 +61,34 @@ jobs:
       - name: Apply and test refresh lease in disposable PostgreSQL
         run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/003_job_refresh_lease.sql -f tests/job-refresh-lease.sql
 
+  private-board-database:
+    name: Private job board RLS and daily claim isolation
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: offline-test-password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: 5432
+      PGUSER: postgres
+      PGDATABASE: postgres
+      PGPASSWORD: offline-test-password
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply and test private isolation in disposable PostgreSQL
+        run: psql -v ON_ERROR_STOP=1 -f tests/private-job-board-bootstrap.sql -f supabase/migrations/004_private_job_board.sql -f tests/private-job-board.sql
+      - name: Test overlapping daily scan claims
+        run: bash tests/private-job-board-concurrency.sh
+
   frontend:
     name: Frontend type, lint, build and mocked browser regressions
     runs-on: ubuntu-latest
@@ -88,9 +116,9 @@ jobs:
       - name: Install test browser
         run: npx playwright install --with-deps chromium
       - name: Refresh Edge Function offline regressions
-        run: node --test ../tests/job-refresh.test.mjs
+        run: node --test ../tests/job-refresh.test.mjs ../tests/private-job-board.test.mjs
       - name: Refresh handler type check
-        run: npx tsc --ignoreConfig --noEmit --strict --target ES2022 --module nodenext --skipLibCheck ../supabase/functions/refresh-jobs/handler.ts
+        run: npx tsc --ignoreConfig --noEmit --strict --target ES2022 --module nodenext --skipLibCheck ../supabase/functions/refresh-jobs/handler.ts ../supabase/functions/private-job-board/handler.ts
       - name: Mocked browser regressions
         run: npm test
       - name: Dependency advisories (including build tools)

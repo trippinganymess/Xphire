@@ -86,5 +86,5 @@ const database = new PostgrestClient(new URL('rest/v1', baseUrl).href, {
 });
 
 // Only services used by this application; no Storage or Realtime constructors.
-export const supabase = { auth, from: database.from.bind(database) };
+export const supabase = { auth, from: database.from.bind(database), rpc: database.rpc.bind(database) };
 export const functionsUrl = new URL('functions/v1', baseUrl).href;
