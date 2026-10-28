@@ -25,6 +25,12 @@ npm run typecheck && npm run lint && npm run build && npm test
 
 ---
 
+## Private paid job discovery (connectivity gate)
+
+An isolated, manual-only [API connectivity gate](docs/paid-job-discovery.md) is prepared for OpenWeb Ninja JSearch and TheirStack. It supports the repository's existing `X_API_KEY` and `THEIR_STACK_API_KEY` Actions secrets as well as canonical names. A gate-only PR must be reviewed and merged, then the live test separately authorized; database integration remains blocked until both APIs return HTTP 200 with parseable job data. No private-job database integration, paid daily scanner, or private frontend has been added; the public pipeline is unchanged.
+
+---
+
 ##  Features
 
 - **850+ ATS & Portal Scraping**: Direct API integrations with Greenhouse, Lever, Ashby, and SmartRecruiters alongside Google Jobs, LinkedIn, and Indeed.
