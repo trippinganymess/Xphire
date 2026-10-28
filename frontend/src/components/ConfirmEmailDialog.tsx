@@ -35,7 +35,8 @@ function SplitLabel({ text }: { text: string }) {
 /**
  * Confirm/decline gate from confirm_or_decline_email_code.md: hovering a
  * choice floods it with color, choosing one bursts a circle across the
- * overlay, and the paired callback fires so the caller can proceed.
+ * overlay, and the paired callback fires once the burst completes so the
+ * caller proceeds after the animation finishes.
  */
 export default function ConfirmEmailDialog({
   open,
@@ -102,9 +103,13 @@ export default function ConfirmEmailDialog({
   function decide(action: 'confirm' | 'cancel') {
     if (burst) return;
     setBurst(action);
-    burstTimer.current = window.setTimeout(() => setBurst(null), 2000);
-    if (action === 'confirm') onConfirm();
-    else onCancel();
+    // The burst must complete before the caller proceeds, so the dialog
+    // never clips its own explosion.
+    burstTimer.current = window.setTimeout(() => {
+      setBurst(null);
+      if (action === 'confirm') onConfirm();
+      else onCancel();
+    }, 2000);
   }
 
   const onRootKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {

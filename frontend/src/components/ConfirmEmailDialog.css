@@ -1,29 +1,29 @@
-@import url("https://fonts.googleapis.com/css2?family=Hubballi&display=swap");
-
 /* ===================================================================
    CONFIRM / DECLINE EMAIL DIALOG - adapted from confirm_or_decline_email_code.md
-   Full-viewport choice: hover floods a pill with color, choosing bursts
-   a circle across the screen, then settles.
+   Scaled to the app's card scale and retinted to the sketch palette:
+   ink strokes on white paper, olive-green confirm (FancyButton colors),
+   brand-red cancel. Hover floods a pill, choosing bursts a circle
+   across the overlay, then the paired callback fires.
    =================================================================== */
 
 .confirm-email-dialog {
-  --db: #0a1347;
-  --bg: #f5e8df;
-  --r: #e1504a;
+  --ink: var(--ink-black, #0a0a0a);
+  --paper: #ffffff;
+  --red: #c0392b;
+  --green-olive: hsl(96deg, 37.04%, 10.59%);
+  --green-vivid: hsl(96.67deg, 81.15%, 47.84%);
   --expo: cubic-bezier(1, 0, 0, 1);
   --elastic: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  --pill-h: 64px;
 
   position: fixed;
   inset: 0;
   z-index: 400;
   display: grid;
   place-items: center;
-  width: 100%;
-  height: 100%;
-  background: var(--bg);
-  color: var(--db);
-  font-family: "Hubballi", sans-serif;
-  font-weight: 900;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
   overflow: hidden;
 }
 
@@ -35,14 +35,16 @@
 
 .confirm-email-dialog__container {
   text-align: center;
-  transform: translateY(-5vw);
+  width: min(620px, 94vw);
+  transform: translateY(-1.5rem);
 }
 
 .confirm-email-dialog__question {
-  font-size: 6vw;
+  font-family: 'Bitcount Single', system-ui;
+  font-size: 1.75rem;
   text-transform: uppercase;
-  color: var(--db);
-  margin: 0 0 5vw;
+  color: var(--ink);
+  margin: 0 0 2rem;
   display: inline-block;
   position: relative;
   z-index: 0;
@@ -52,11 +54,11 @@
 .confirm-email-dialog__question::before {
   content: "";
   position: absolute;
-  width: 90vw;
-  height: 22.5vw;
-  top: 3.5vw;
-  box-shadow: 0 0 0 0.5vw var(--db), 0 2.5vw 0 -0.5vw var(--db);
-  left: calc(50% - 45vw);
+  width: min(620px, 94vw);
+  height: 9.25rem;
+  top: 1.5rem;
+  box-shadow: 0 0 0 2px var(--ink), 0 8px 0 -2px var(--ink);
+  left: calc(50% - min(620px, 94vw) / 2);
   z-index: -2;
 }
 
@@ -65,7 +67,7 @@
   position: absolute;
   width: 125%;
   height: 125%;
-  background: var(--bg);
+  background: var(--paper);
   left: -12.5%;
   top: -12.5%;
   z-index: -1;
@@ -74,7 +76,9 @@
 .confirm-email-dialog__buttons {
   display: flex;
   justify-content: space-between;
-  width: 80vw;
+  position: relative;
+  width: 100%;
+  padding: 0 28px;
 }
 
 /* ── Hover reveal: hovering the row shrinks pills, hovering one floods it ── */
@@ -82,13 +86,13 @@
   width: 30%;
 }
 .confirm-email-dialog__buttons:hover .confirm-email-dialog__btnwrap > .confirm-email-dialog__reveal {
-  font-size: 3.5vw;
+  font-size: 1.2rem;
 }
 .confirm-email-dialog__buttons .confirm-email-dialog__btnwrap:hover {
   width: 60%;
 }
 .confirm-email-dialog__buttons:hover .confirm-email-dialog__btnwrap:hover > .confirm-email-dialog__reveal {
-  font-size: 5vw;
+  font-size: 1.7rem;
 }
 .confirm-email-dialog__buttons:hover .confirm-email-dialog__btnwrap:hover .char::before {
   transform: scaleY(0);
@@ -99,7 +103,7 @@
   width: 30%;
 }
 .confirm-email-dialog__buttons:hover .confirm-email-dialog__btnwrap:hover ~ .confirm-email-dialog__btnwrap > .confirm-email-dialog__reveal {
-  font-size: 3.5vw;
+  font-size: 1.2rem;
 }
 
 /* ── Choice pills ── */
@@ -109,7 +113,7 @@
   justify-content: center;
   width: 47.5%;
   position: relative;
-  height: 8.5vw;
+  height: var(--pill-h);
   transition: 0.4s ease-in-out;
   transform: translateZ(0px);
 }
@@ -120,7 +124,7 @@
   width: 200vw;
   height: 200vw;
   border-radius: 100%;
-  background: var(--db);
+  background: var(--red);
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%) translateZ(0px) scale(0);
@@ -130,11 +134,11 @@
 .confirm-email-dialog__btnwrap:last-of-type > .confirm-email-dialog__reveal {
   background: repeating-linear-gradient(
     45deg,
-    var(--r) 0.25vw,
-    var(--bg) 0.25vw,
-    var(--bg) 1.5vw,
-    var(--r) 1.5vw,
-    var(--r) 1.75vw
+    var(--red) 2px,
+    var(--paper) 2px,
+    var(--paper) 14px,
+    var(--red) 14px,
+    var(--red) 18px
   );
 }
 
@@ -148,7 +152,7 @@
   width: 100%;
   height: 50%;
   top: 25%;
-  background: var(--bg);
+  background: var(--paper);
   z-index: -1;
   transition: transform 0.3s var(--elastic) 0.4s;
   transform-origin: bottom;
@@ -178,20 +182,20 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  letter-spacing: 0.5vw;
+  letter-spacing: 0.35em;
   text-transform: uppercase;
-  font-size: 4vw;
+  font-size: 1.5rem;
   line-height: 1;
   text-align: center;
-  color: var(--db);
-  box-shadow: 0 0 0 0.5vw var(--db), 0 0 0 1vw var(--bg);
-  background: var(--bg);
+  color: var(--ink);
+  box-shadow: 0 0 0 2px var(--ink), 0 0 0 5px var(--paper), 0 0 0 6px var(--ink);
+  background: var(--paper);
   border-radius: 50vmin;
   overflow: hidden;
 }
 
 .confirm-email-dialog__btnwrap:first-of-type {
-  --r: var(--bg);
+  --red: var(--paper);
 }
 
 .confirm-email-dialog__btnwrap:first-of-type > .confirm-email-dialog__reveal::after {
@@ -204,29 +208,29 @@
 
 .confirm-email-dialog__btnwrap > .confirm-email-dialog__reveal::after {
   position: absolute;
-  width: 4vw;
-  height: 4vw;
-  color: var(--db);
+  width: 26px;
+  height: 26px;
+  color: var(--ink);
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--bg);
-  font-size: 2.5vw;
-  left: 1vw;
+  background: var(--paper);
+  font-size: 16px;
+  left: 8px;
   border-radius: 100%;
   z-index: 9;
-  transform: translateX(-200%) rotate(360deg);
+  transform: translateX(-250%) rotate(360deg);
   transition: 0.3s var(--elastic);
 }
 
 .confirm-email-dialog__btnwrap > .confirm-email-dialog__reveal::before {
   content: "";
   position: absolute;
-  width: 50vw;
-  height: 50vw;
+  width: 200%;
+  height: 400px;
   top: 0;
   left: 50%;
-  background: var(--db);
+  background: var(--red);
   transform: scaleY(0) translate(-50%, 0) translateZ(0px);
   transform-origin: bottom;
   transition: transform 0.4s ease-in-out 0.2s,
@@ -284,7 +288,7 @@
   position: absolute;
   top: 100%;
   left: 0;
-  color: var(--bg);
+  color: var(--paper);
   height: 100%;
   width: 100%;
   display: flex;
@@ -299,11 +303,11 @@
   transition: transform 0.4s ease-in-out,
     background 0.4s ease-in-out 0.4s;
   border-radius: 0;
-  background: var(--r);
+  background: var(--red);
 }
 
 .confirm-email-dialog__btnwrap--confirm button:hover ~ .confirm-email-dialog__reveal::before {
-  background: var(--db);
+  background: var(--green-olive);
 }
 
 .confirm-email-dialog__btnwrap button:hover ~ .confirm-email-dialog__reveal::after {
@@ -316,19 +320,32 @@
   transition: transform 0.5s var(--expo)
       calc((var(--char-index) + 4) * 0.05s),
     color 0.4s ease-in-out;
-  color: var(--r);
+  color: var(--red);
 }
 
-/* ── Burst: the chosen pill expands over the whole viewport, then reverts ── */
+/* The flooded confirm pill reads like a FancyButton: olive pane, vivid text. */
+.confirm-email-dialog__btnwrap--confirm button:hover ~ .confirm-email-dialog__reveal .char {
+  color: var(--green-vivid);
+}
+.confirm-email-dialog__btnwrap--confirm button:hover ~ .confirm-email-dialog__reveal .char::after {
+  color: var(--green-vivid);
+}
+
+/* ── Burst: the chosen pill expands over the whole viewport, then the ──
+   callback fires and the caller unmounts the dialog. */
 .confirm-email-dialog--burst-confirm .confirm-email-dialog__btnwrap:first-of-type,
 .confirm-email-dialog--burst-confirm .confirm-email-dialog__buttons:hover .confirm-email-dialog__btnwrap:first-of-type {
-  width: 8.5vw;
-  transform: translateX(calc(40vw - 4.25vw));
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--pill-h);
+  transform: translate(-50%, -50%);
   z-index: 9;
 }
 
 .confirm-email-dialog--burst-confirm .confirm-email-dialog__btnwrap:first-of-type::before {
   transform: translate(-50%, -50%) translateZ(0px) scale(1);
+  background: var(--green-olive);
 }
 
 .confirm-email-dialog--burst-confirm .confirm-email-dialog__btnwrap:first-of-type > .confirm-email-dialog__reveal::before {
@@ -336,7 +353,7 @@
 }
 
 .confirm-email-dialog--burst-confirm .confirm-email-dialog__btnwrap:first-of-type > .confirm-email-dialog__reveal::after {
-  transform: translateX(1.5vw);
+  transform: translateX(10px);
   transition-delay: 0s;
 }
 
@@ -352,14 +369,17 @@
 
 .confirm-email-dialog--burst-cancel .confirm-email-dialog__btnwrap:last-of-type,
 .confirm-email-dialog--burst-cancel .confirm-email-dialog__buttons:hover .confirm-email-dialog__btnwrap:last-of-type {
-  width: 8.5vw;
-  transform: translateX(calc(-40vw + 4.25vw));
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--pill-h);
+  transform: translate(-50%, -50%);
   z-index: 9;
 }
 
 .confirm-email-dialog--burst-cancel .confirm-email-dialog__btnwrap:last-of-type::before {
   transform: translate(-50%, -50%) translateZ(0px) scale(1);
-  background: var(--r);
+  background: var(--red);
 }
 
 .confirm-email-dialog--burst-cancel .confirm-email-dialog__btnwrap:last-of-type > .confirm-email-dialog__reveal::before {
@@ -367,8 +387,8 @@
 }
 
 .confirm-email-dialog--burst-cancel .confirm-email-dialog__btnwrap:last-of-type > .confirm-email-dialog__reveal::after {
-  transform: translateX(1.5vw);
-  color: var(--r);
+  transform: translateX(10px);
+  color: var(--red);
   transition-delay: 0s;
 }
 
@@ -384,7 +404,7 @@
 
 /* Keyboard focusring: the real buttons are invisible, so expose focus. */
 .confirm-email-dialog__btnwrap:has(> button:focus-visible) > .confirm-email-dialog__reveal {
-  box-shadow: 0 0 0 0.5vw var(--db), 0 0 0 0.9vw var(--r);
+  box-shadow: 0 0 0 2px var(--ink), 0 0 0 4px var(--red);
 }
 
 .confirm-email-dialog__btnwrap button:focus {
