@@ -9,14 +9,16 @@ async function signIn(page: Page) {
 
 const requestPosts = (requests: MockBackend['requests']) => requests.filter((request) => request.path === '/functions/v1/request-private-access');
 
-/** The access email is gated behind the Confirm/Cancel dialog. */
 async function awaitGate(page: Page) {
   await page.getByRole('dialog').waitFor();
 }
 
+/** The access email is gated behind the Confirm/Cancel dialog; the gate
+ *  plays its burst (2000ms) and only then settles the choice. */
 async function confirmEmail(page: Page) {
   await awaitGate(page);
   await page.getByRole('button', { name: 'Confirm', exact: true }).click();
+  await page.clock.runFor(2_100);
 }
 
 test('PJobB offers an access request page and guests sign in before sending', async ({ page, backend }) => {
@@ -61,6 +63,7 @@ test('canceling the confirmation leaves the form untouched and sends nothing', a
   await page.getByRole('button', { name: 'REQUEST ACCESS', exact: true }).click();
   await awaitGate(page);
   await page.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await page.clock.runFor(2_100);
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect(page.getByLabel('Your name')).toBeEnabled();
   expect(requestPosts(backend.requests)).toHaveLength(0);
