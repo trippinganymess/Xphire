@@ -353,6 +353,27 @@ class ConnectivityTests(unittest.TestCase):
                     self.assertNotIn(secret, output)
                 self.assertNotIn("PRIVATE_FULL_DESCRIPTION_SENTINEL", output)
 
+    def test_one_request_per_provider_with_both_keys(self):
+        from copy import deepcopy
+        from tests.test_paid_api_connectivity import JSEARCH_JOB, THEIRSTACK_JOB
+        opener = Opener(Response({"data": [deepcopy(JSEARCH_JOB)]}),
+                          Response({"data": [deepcopy(THEIRSTACK_JOB)]}))
+        report = api.run_gate(dict(ENV), opener)
+        self.assertTrue(report["passed"])
+        self.assertEqual(len(opener.requests), 2)
+        self.assertEqual(report["sources"]["jsearch"]["requests_made"], 1)
+        self.assertEqual(report["sources"]["theirstack"]["requests_made"], 1)
+        self.assertEqual(report["sources"]["theirstack"]["estimated_api_credits_used"], 1)
+
+    def test_workflow_dispatch_and_read_only_secrets(self):
+        workflow = (Path(__file__).resolve().parents[1] / ".github/workflows/paid_api_connectivity.yml").read_text()
+        self.assertIn("workflow_dispatch:", workflow)
+        self.assertIn("permissions:", workflow)
+        self.assertIn("contents: read", workflow)
+        self.assertIn("secrets.JSEARCH_API_KEY || secrets.X_API_KEY", workflow)
+        self.assertIn("secrets.THEIRSTACK_API_KEY || secrets.THEIR_STACK_API_KEY", workflow)
+        self.assertNotIn("SUPABASE", workflow)
+
     def test_cli_writes_safe_report_and_summary_and_failure_exit(self):
         with tempfile.TemporaryDirectory() as directory:
             report_path = Path(directory) / "report.json"
