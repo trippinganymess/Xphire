@@ -364,7 +364,10 @@ def main() -> int:
     parser.add_argument("--report", type=Path, help="Write only sanitized diagnostics as JSON")
     args = parser.parse_args()
     report = run_gate(dict(os.environ))
-    rendered = json.dumps(report, indent=2, ensure_ascii=False, allow_nan=False)
+    safe_report = dict(report)
+    safe_report.pop("missing_secrets", None)
+    safe_report.pop("invalid_secrets", None)
+    rendered = json.dumps(safe_report, indent=2, ensure_ascii=False, allow_nan=False)
     print(rendered)
     if args.report:
         args.report.parent.mkdir(parents=True, exist_ok=True)
