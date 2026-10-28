@@ -27,7 +27,7 @@ npm run typecheck && npm run lint && npm run build && npm test
 
 ## Private paid job discovery (connectivity gate)
 
-An isolated, manual-only [API connectivity gate](docs/paid-job-discovery.md) is prepared for OpenWeb Ninja JSearch and TheirStack. It supports the repository's existing `X_API_KEY` and `THEIR_STACK_API_KEY` Actions secrets as well as canonical names. A gate-only PR must be reviewed and merged, then the live test separately authorized; database integration remains blocked until both APIs return HTTP 200 with parseable job data. No private-job database integration, paid daily scanner, or private frontend has been added; the public pipeline is unchanged.
+The isolated, manual-only [API connectivity gate](docs/paid-job-discovery.md) now checks **TheirStack only**; JSearch is deferred by user request. It accepts `THEIR_STACK_API_KEY` or the canonical `THEIRSTACK_API_KEY` Actions secret and makes one request without retries. TheirStack returned HTTP 200 with nine parseable jobs in the authorized live run; the historical two-provider workflow failed because JSearch returned 404. The revised single-provider probe has offline coverage but has not been rerun live. Private-job database integration, the paid daily scanner, and the **PJobB** button/cyan private board are not implemented; the public pipeline is unchanged.
 
 ---
 

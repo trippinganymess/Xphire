@@ -12,7 +12,7 @@ concurrency:
 
 jobs:
   connectivity:
-    name: Prove both APIs before database integration
+    name: Prove TheirStack before database integration
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -22,9 +22,8 @@ jobs:
           python-version: '3.11'
       - name: Offline probe regressions (no credentials or network)
         run: python -m unittest discover -s tests -p test_paid_api_connectivity.py -v
-      - name: One real request to each API
+      - name: One real request to TheirStack
         env:
-          JSEARCH_API_KEY: ${{ secrets.JSEARCH_API_KEY || secrets.X_API_KEY }}
           THEIRSTACK_API_KEY: ${{ secrets.THEIRSTACK_API_KEY || secrets.THEIR_STACK_API_KEY }}
         run: python scripts/test_paid_job_apis.py --report paid-api-connectivity-report.json
       - name: Retain sanitized connectivity evidence
