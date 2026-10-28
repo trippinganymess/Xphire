@@ -1,14 +1,14 @@
 /* ===================================================================
    CONFIRM / DECLINE EMAIL DIALOG - adapted from confirm_or_decline_email_code.md
    Scaled to the app's card scale and retinted to the sketch palette:
-   ink strokes on white paper, olive-green confirm (FancyButton colors),
-   brand-red cancel. Hover floods a pill, choosing bursts a circle
-   across the overlay, then the paired callback fires.
+   ink strokes on light-beige paper, olive-green confirm (FancyButton
+   colors), brand-red cancel. Hover floods a pill, choosing bursts a
+   circle across the overlay, then the paired callback fires.
    =================================================================== */
 
 .confirm-email-dialog {
   --ink: var(--ink-black, #0a0a0a);
-  --paper: #ffffff;
+  --paper: #f7f1e8;
   --red: #c0392b;
   --green-olive: hsl(96deg, 37.04%, 10.59%);
   --green-vivid: hsl(96.67deg, 81.15%, 47.84%);
