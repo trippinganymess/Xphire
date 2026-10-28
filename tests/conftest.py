@@ -234,11 +234,12 @@ def jobspy_effects(monkeypatch, clock):
 
 @pytest.fixture
 def smtp_effects(monkeypatch, clock):
-    effects = SimpleNamespace(messages=[], events=[], failures=deque())
+    effects = SimpleNamespace(messages=[], events=[], failures=deque(), connections=[], tls_context=None)
 
     class SMTP:
-        def __init__(self, host, port):
+        def __init__(self, host, port, **options):
             effects.events.append(("connect", host, port))
+            effects.connections.append(options)
             if effects.failures:
                 raise effects.failures.popleft()
 
@@ -251,8 +252,9 @@ def smtp_effects(monkeypatch, clock):
         def ehlo(self):
             effects.events.append(("ehlo",))
 
-        def starttls(self):
+        def starttls(self, **options):
             effects.events.append(("starttls",))
+            effects.tls_context = options.get("context")
 
         def login(self, user, password):
             assert (user, password) == ("sender@example.invalid", "offline-smtp")
@@ -260,6 +262,7 @@ def smtp_effects(monkeypatch, clock):
 
         def sendmail(self, sender, recipient, message):
             effects.messages.append((sender, recipient, message))
+            return {}
 
     monkeypatch.setenv("SMTP_HOST", "smtp.invalid")
     monkeypatch.setenv("SMTP_USER", "sender@example.invalid")

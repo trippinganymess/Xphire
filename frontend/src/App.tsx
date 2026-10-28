@@ -9,6 +9,7 @@ import './App.css';
 
 const SketchTerminal = lazy(() => import('./components/SketchTerminal'));
 const PrivateJobBoard = lazy(() => import('./components/PrivateJobBoard'));
+const PrivateAccessRequest = lazy(() => import('./components/PrivateAccessRequest'));
 
 // A wrapper component that passes the current route down to the header
 function AppLayout() {
@@ -96,6 +97,11 @@ function AppLayout() {
       <main className="sketch-app-main">
         <Routes>
           <Route path="/" element={<JobBoard />} />
+          <Route path="/private-jobs/request-access" element={
+            <Suspense fallback={<p role="status">Loading access request...</p>}>
+              <PrivateAccessRequest />
+            </Suspense>
+          } />
           <Route path="/private-jobs" element={
             <Suspense fallback={<p role="status">Loading private board...</p>}><PrivateJobBoard /></Suspense>
           } />

@@ -1,0 +1,36 @@
+name: Xphire PJobB Access Requests
+
+on:
+  workflow_dispatch:
+    inputs:
+      request_id:
+        description: Saved PJobB access request UUID
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pjobb-access-${{ inputs.request_id }}
+  cancel-in-progress: false
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Deliver the saved access request
+        env:
+          ACCESS_REQUEST_ID: ${{ inputs.request_id }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+        run: python -m workers.worker_access_request

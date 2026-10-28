@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { JOB_PAGE_SIZE, type JobFilters } from '../lib/jobCatalog';
 import { discoverPrivateJobs, usePrivateIdentity, usePrivateJobPage } from '../lib/privateJobBoard';
+import { DEFAULT_PRIVATE_DISCOVERY, PRIVATE_DISCOVERY_PRESETS, type PrivateDiscoveryQuery } from '../../../shared/privateDiscoveryPresets';
 import { JobCards, JobFilterBar, JobPagination } from './JobBoardView';
 import './JobBoard.css';
 import './PrivateJobBoard.css';
@@ -10,7 +11,17 @@ function AuthenticatedBoard({ userId, authVersion }: { userId: string; authVersi
   const [{ filters, page }, setQuery] = useState<{ filters: JobFilters; page: number }>({
     filters: { keyword: '', minRating: 'All', freshersOnly: false, source: 'All' }, page: 1,
   });
-  const [jobTitle, setJobTitle] = useState('frontend developer');
+  const [jobTitle, setJobTitle] = useState<PrivateDiscoveryQuery>(DEFAULT_PRIVATE_DISCOVERY);
+  const [keyword, setKeyword] = useState('');
+  const [filterPending, setFilterPending] = useState(false);
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setQuery((current) => current.filters.keyword === keyword ? current
+        : { filters: { ...current.filters, keyword }, page: 1 });
+      setFilterPending(false);
+    }, 400);
+    return () => window.clearTimeout(timer);
+  }, [keyword]);
   const [scan, setScan] = useState<{ busy: boolean; message: string; failed: boolean }>({ busy: false, message: '', failed: false });
   const request = useRef<AbortController | null>(null);
   useEffect(() => () => { request.current?.abort(); }, []);
@@ -38,7 +49,11 @@ function AuthenticatedBoard({ userId, authVersion }: { userId: string; authVersi
     const result = await discoverPrivateJobs(jobTitle.trim(), AbortSignal.any([controller.signal, AbortSignal.timeout(55_000)]));
     if (!controller.signal.aborted) {
       setScan({ busy: false, ...result });
-      if (!result.failed) onPage(1);
+      if (!result.failed) {
+        setKeyword('');
+        setFilterPending(false);
+        setQuery({ filters: { keyword: '', minRating: 'All', freshersOnly: false, source: 'All' }, page: 1 });
+      }
       refresh();
     }
     request.current = null;
@@ -52,33 +67,54 @@ function AuthenticatedBoard({ userId, authVersion }: { userId: string; authVersi
     {access?.allowed === false && <div className="private-board-access" role="status">
       <h3>Active paid access required</h3>
       <p>Your administrator must grant access. Expired or revoked access cannot read private jobs.</p>
+      <Link to="/private-jobs/request-access">Request access</Link>
       <button type="button" onClick={refresh}>Check access again</button>
     </div>}
     {access?.allowed && <>
       <form className="private-board-discovery" onSubmit={(e) => { e.preventDefault(); void findJobs(); }}>
-        <label htmlFor="private-job-title">Job title for your daily discovery</label>
+        <label htmlFor="private-job-title">Discovery preset</label>
         <div className="private-board-discovery-controls">
-          <input id="private-job-title" value={jobTitle} maxLength={120} required
-            onChange={(e) => setJobTitle(e.target.value)} disabled={scan.busy} />
+          <select id="private-job-title" value={jobTitle}
+            onChange={(e) => setJobTitle(e.target.value as PrivateDiscoveryQuery)} disabled={scan.busy}>
+            {PRIVATE_DISCOVERY_PRESETS.map((preset) => <option key={preset.value} value={preset.value}>{preset.label}</option>)}
+          </select>
           <button type="submit" disabled={scan.busy || loading || limited || !jobTitle.trim()}>
             {scan.busy ? 'FINDING YOUR JOBS...' : 'FIND MY JOBS'}
           </button>
           <button type="button" disabled={loading} onClick={refresh}>Reload board</button>
         </div>
+        <p>These supported titles keep searches predictable; live vacancies are not guaranteed. The default Frontend + Python preset previously returned jobs in the connectivity test.</p>
         <p>One TheirStack request per 24 hours, on request. Failed attempts also use the allowance. Reloading saved jobs is free.</p>
         {limited && <p role="status">Next discovery: {new Date(nextAllowed).toLocaleString()}</p>}
         {access.last_query && <p>Last discovery query: {access.last_query}</p>}
       </form>
       {scan.message && <p className="job-board-feedback" role={scan.failed ? 'alert' : 'status'}>{scan.message}</p>}
-      <JobFilterBar filters={filters} privateBoard onChange={(update) => {
-        setQuery((current) => ({ filters: { ...current.filters, ...update }, page: 1 }));
+      <p className="private-board-note">Search below filters saved jobs only; it does not discover new jobs.</p>
+      <JobFilterBar filters={{ ...filters, keyword }} privateBoard onChange={(update) => {
+        if (update.keyword !== undefined) {
+          setKeyword(update.keyword);
+          setFilterPending(true);
+        } else setQuery((current) => ({ filters: { ...current.filters, ...update }, page: 1 }));
       }} />
+      {filterPending && <p role="status">Waiting for you to finish typing...</p>}
       <p className="private-board-note">Provider labels are not verified fresher eligibility. “Found” is discovery time, not posting time. Company ratings are not supplied.</p>
       {loading && data && <p role="status">Refreshing your saved jobs...</p>}
       {data && <JobPagination page={page} pages={pages} total={total} loading={loading}
         hasData privateBoard onPage={onPage} />}
-      {data && data.jobs.length === 0 && !loading && <div className="job-board-empty">
-        <p>No private jobs match your filters. Try another keyword or use your daily discovery.</p>
+      {data && data.jobs.length === 0 && !loading && !filterPending && <div className="job-board-empty">
+        <p>{filters.keyword.trim() || filters.freshersOnly
+          ? 'No saved jobs match these filters. Clear the filters to see all your saved jobs.'
+          : access.last_status === 'failed'
+            ? 'Your last discovery did not complete. No saved jobs are available; check the discovery error before trying again.'
+            : access.last_status === 'running'
+              ? 'Your discovery is still running. Reload shortly to check for saved jobs.'
+              : access.last_status === 'completed'
+                ? 'No jobs were saved by your latest discovery. Live availability varies; check your next discovery time.'
+                : 'No saved jobs yet. Choose a discovery preset and click FIND MY JOBS.'}</p>
+        {(filters.keyword.trim() || filters.freshersOnly) && <button type="button" onClick={() => {
+          setKeyword(''); setFilterPending(false);
+          setQuery({ filters: { keyword: '', minRating: 'All', freshersOnly: false, source: 'All' }, page: 1 });
+        }}>Clear filters</button>}
       </div>}
       <JobCards jobs={data?.jobs ?? []} privateBoard />
     </>}
@@ -97,6 +133,7 @@ export default function PrivateJobBoard() {
       ? <div className="private-board-access"><h3>Sign in to open PJobB</h3>
         <p>Private jobs are available only to signed-in users with active paid access.</p>
         <Link to="/terminal">Sign in through Terminal Access</Link>
+        <Link to="/private-jobs/request-access">Request access</Link>
       </div>
       : <AuthenticatedBoard key={identity.userId} userId={identity.userId} authVersion={identity.version} />}
   </section>;

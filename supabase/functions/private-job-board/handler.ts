@@ -1,3 +1,6 @@
+import { privateDiscoveryPreset } from '../../../shared/privateDiscoveryPresets.ts';
+import { bounded, discard, readJson, record } from '../_shared/http.ts';
+
 interface Config {
   supabaseUrl: string;
   serviceKey: string;
@@ -31,54 +34,6 @@ function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status, headers: { ...cors, 'Content-Type': 'application/json' },
   });
-}
-
-function record(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
-}
-
-// Race reads too: a stalled request body must not outlive the overall deadline.
-function bounded<T>(promise: Promise<T>, signal: AbortSignal): Promise<T> {
-  if (signal.aborted) return Promise.reject(new Error('Deadline exceeded'));
-  return new Promise((resolve, reject) => {
-    const abort = () => reject(new Error('Deadline exceeded'));
-    signal.addEventListener('abort', abort, { once: true });
-    promise.then(resolve, reject).finally(() => signal.removeEventListener('abort', abort));
-  });
-}
-
-function discard(response: Response) {
-  void response.body?.cancel().catch(() => {});
-}
-
-async function readJson(message: Request | Response, maxBytes: number, signal: AbortSignal): Promise<unknown> {
-  const length = message.headers.get('content-length');
-  if (length !== null && (!/^\d+$/.test(length) || Number(length) > maxBytes)) {
-    void message.body?.cancel().catch(() => {});
-    throw new Error('Body limit exceeded');
-  }
-  if (!message.body) throw new Error('Missing body');
-  const reader = message.body.getReader();
-  const chunks: Uint8Array[] = [];
-  let size = 0;
-  try {
-    while (true) {
-      const { done, value } = await bounded(reader.read(), signal);
-      if (done) break;
-      size += value.byteLength;
-      if (size > maxBytes) throw new Error('Body limit exceeded');
-      chunks.push(value);
-    }
-    const bytes = new Uint8Array(size);
-    let offset = 0;
-    for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength; }
-    return JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
-  } catch {
-    void reader.cancel().catch(() => {});
-    throw new Error('Invalid body');
-  } finally {
-    reader.releaseLock();
-  }
 }
 
 function text(value: unknown, limit = 300): string | null {
@@ -183,12 +138,14 @@ export function createPrivateJobBoardHandler(config: Config, http: typeof fetch 
     const signal = AbortSignal.any([AbortSignal.timeout(DEADLINE_MS), req.signal]);
     let claim: { user: string; token: string; next: string | null } | null = null;
     let failureStatus = 503;
+    let failureCode = 'service_not_configured';
     try {
       const parsedBase = new URL(base);
       if (parsedBase.protocol !== 'https:' || parsedBase.username || parsedBase.password || parsedBase.search
         || parsedBase.hash || ![config.serviceKey, config.theirStackKey].every((key) => /^[\x21-\x7e]+$/.test(key))) {
         throw new Error('Service not configured');
       }
+      failureCode = 'authentication_unavailable';
       const authResponse = await request(`${base}/auth/v1/user`, {
         headers: { apikey: config.serviceKey, Authorization: authorization },
       }, signal);
@@ -211,6 +168,9 @@ export function createPrivateJobBoardHandler(config: Config, http: typeof fetch 
       } catch {
         return json({ error: 'Provide only a query of 1–120 printable characters' }, 400);
       }
+      const preset = privateDiscoveryPreset(query);
+      if (!preset) return json({ error: 'Choose a supported discovery preset', code: 'invalid_preset' }, 400);
+      failureCode = 'scan_claim_unavailable';
       const token = crypto.randomUUID();
       const acquired = await rpc('claim_private_job_scan', { p_user_id: user.id, p_token: token, p_query: query }, signal);
       if (!record(acquired)) throw new Error('Invalid claim');
@@ -223,16 +183,19 @@ export function createPrivateJobBoardHandler(config: Config, http: typeof fetch 
       if (!claim) throw new Error('Invalid claim');
       claim.next = next;
       failureStatus = 502;
+      failureCode = 'provider_unavailable';
       // Exactly one request; no retries, pagination, JSearch, or public job writes.
       const provider = await request('https://api.theirstack.com/v1/jobs/search', {
         method: 'POST', headers: { Authorization: `Bearer ${config.theirStackKey}`, 'Content-Type': 'application/json', Accept: 'application/json' },
-        body: JSON.stringify({ job_title_or: [query], job_country_code_or: ['IN'], posted_at_max_age_days: 1,
+        body: JSON.stringify({ job_title_or: [...preset.titles], job_country_code_or: ['IN'], posted_at_max_age_days: 1,
           job_seniority_or: ['junior'], employment_statuses_or: ['full_time', 'internship'],
           workplace_types_or: ['remote', 'hybrid', 'on_site'], limit: 10, page: 0 }),
       }, signal);
       if (provider.status !== 200) { discard(provider); throw new Error('Discovery unavailable'); }
+      failureCode = 'provider_response_invalid';
       const jobs = await cards(await readJson(provider, PROVIDER_BYTES, signal), [config.serviceKey, config.theirStackKey]);
       failureStatus = 503;
+      failureCode = 'private_save_unavailable';
       const finished = await rpc('finish_private_job_scan', { p_user_id: user.id, p_token: token, p_jobs: jobs }, signal);
       if (!record(finished)) throw new Error('Invalid completion');
       if (finished.status === 'forbidden') {
@@ -247,7 +210,7 @@ export function createPrivateJobBoardHandler(config: Config, http: typeof fetch 
         try { await rpc('fail_private_job_scan', { p_user_id: claim.user, p_token: claim.token }, signal); } catch { /* Quota remains consumed. */ }
       }
       // Never log/return provider bodies, descriptions, headers, exceptions or credentials.
-      return json({ error: 'Private job discovery is temporarily unavailable. Please try again later.',
+      return json({ error: 'Private job discovery is temporarily unavailable. Please try again later.', code: failureCode,
         ...(claim?.next ? { nextAllowedAt: claim.next } : {}) }, failureStatus);
     }
   };
