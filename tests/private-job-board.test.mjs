@@ -399,7 +399,8 @@ test('Deno entrypoint uses canonical key first and trimmed legacy fallback, neve
         THEIRSTACK_API_KEY: canonical, THEIR_STACK_API_KEY: legacy })[key] }, serve: (handler) => { served = handler; } };
       const { http } = setup();
       globalThis.fetch = async (input, init) => {
-        if (String(input).startsWith('https://api.theirstack.com')) {
+        const url = input instanceof URL ? input : new URL(String(input));
+        if (url.protocol === 'https:' && url.hostname === 'api.theirstack.com') {
           assert.equal(new Headers(init.headers).get('authorization'), `Bearer ${expected}`);
           return Response.json({ data: [] });
         }
