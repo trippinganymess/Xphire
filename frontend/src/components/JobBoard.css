@@ -165,11 +165,60 @@
 .job-board-freshers-label {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 10px;
   font-family: var(--font-mono);
   font-size: 13px;
   color: var(--ink-black);
   cursor: pointer;
+  --freshers-size: 44px;
+}
+
+/* Rounded kidney-bean toggle: yellow knob slides right on check. */
+.job-board-freshers-label input[type="checkbox"] {
+  -webkit-appearance: none;
+  appearance: none;
+  flex: none;
+  width: var(--freshers-size);
+  height: calc(var(--freshers-size) / 2);
+  margin: 0;
+  background-color: #fff;
+  border: 3px solid #222;
+  border-radius: 30px 100px 100px 100px;
+  box-shadow: 0 5px 12px rgba(0, 0, 0, 0.2);
+  outline: none;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.5s;
+}
+
+.job-board-freshers-label input[type="checkbox"]::before {
+  content: "";
+  position: absolute;
+  width: calc(var(--freshers-size) / 2);
+  height: calc(var(--freshers-size) / 2);
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%) scale(0.7);
+  border: 3px solid #222;
+  border-radius: 30px 100px 100px 100px;
+  background-color: #fde881;
+  box-sizing: border-box;
+  transition: all 0.5s;
+}
+
+.job-board-freshers-label input[type="checkbox"]:checked {
+  background-color: #fde881;
+  border-radius: 100px 100px 30px 100px;
+}
+
+.job-board-freshers-label input[type="checkbox"]:checked::before {
+  left: 50%;
+  background-color: #fff;
+  border-radius: 100px 100px 30px 100px;
+}
+
+.job-board-freshers-label input[type="checkbox"]:focus-visible {
+  box-shadow: 0 5px 12px rgba(0, 0, 0, 0.2), 0 0 0 3px var(--cyan-neon);
 }
 
 /* ── Job Cards Grid ── */
