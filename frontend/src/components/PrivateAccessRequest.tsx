@@ -52,19 +52,32 @@ function AccessRequestForm({ email, initialName }: { email: string; initialName:
     />
     <form className="private-board-access private-access-form" aria-label="PJobB access request"
       aria-busy={busy} onSubmit={(event) => { event.preventDefault(); openConfirmation(); }}>
-      <label htmlFor="access-request-name">Your name</label>
-      <input id="access-request-name" name="name" autoComplete="name" required maxLength={80}
-        value={name} onChange={(event) => setName(event.target.value)} disabled={busy || !!result} />
-      <label htmlFor="access-request-email">Account email</label>
-      <input id="access-request-email" name="email" type="email" autoComplete="email" value={email} readOnly />
-      <p className="private-board-note">We use your verified account email so access can be granted to the right account.</p>
-      <label htmlFor="access-request-message">Message (optional)</label>
-      <textarea id="access-request-message" name="message" rows={5} maxLength={1000}
-        placeholder="Tell us which roles you are looking for."
-        value={message} onChange={(event) => setMessage(event.target.value)} disabled={busy || !!result} />
-      <FancyButton type="submit" className="private-access-submit" disabled={busy || !!result || !name.trim()}>
-        {busy ? 'SENDING REQUEST...' : result === 'queued' ? 'REQUEST SUBMITTED' : 'REQUEST ACCESS'}
-      </FancyButton>
+      <fieldset>
+        <legend>PJobB access</legend>
+        <div className="form-group">
+          <label htmlFor="access-request-name">Your name</label>
+          <input id="access-request-name" name="name" autoComplete="name" required maxLength={80}
+            className="form-control" placeholder="Enter your name"
+            value={name} onChange={(event) => setName(event.target.value)} disabled={busy || !!result} />
+        </div>
+        <div className="form-group row">
+          <label htmlFor="access-request-email" className="col-sm-2 col-form-label">Account email</label>
+          <div className="col-sm-10">
+            <input id="access-request-email" name="email" type="email" autoComplete="email"
+              className="form-control-plaintext" value={email} readOnly />
+            <small className="form-text text-muted">We use your verified account email so access can be granted to the right account.</small>
+          </div>
+        </div>
+        <div className="form-group">
+          <label htmlFor="access-request-message">Message (optional)</label>
+          <textarea id="access-request-message" name="message" rows={3} maxLength={1000}
+            className="form-control" placeholder="Tell us which roles you are looking for."
+            value={message} onChange={(event) => setMessage(event.target.value)} disabled={busy || !!result} />
+        </div>
+        <button type="submit" className="btn btn-primary" disabled={busy || !!result || !name.trim()}>
+          {busy ? 'SENDING REQUEST...' : result === 'queued' ? 'REQUEST SUBMITTED' : 'REQUEST ACCESS'}
+        </button>
+      </fieldset>
     </form>
     {error && <p className="job-board-feedback" role="alert">{error}</p>}
     {result === 'queued' && <p className="job-board-feedback" role="status">
