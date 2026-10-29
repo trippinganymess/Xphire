@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { JOB_PAGE_SIZE, type JobFilters } from '../lib/jobCatalog';
 import { discoverPrivateJobs, usePrivateIdentity, usePrivateJobPage } from '../lib/privateJobBoard';
 import { DEFAULT_PRIVATE_DISCOVERY, PRIVATE_DISCOVERY_PRESETS, type PrivateDiscoveryQuery } from '../../../shared/privateDiscoveryPresets';
 import { JobCards, JobFilterBar, JobPagination } from './JobBoardView';
+import FancyButton from './FancyButton';
 import './JobBoard.css';
 import './PrivateJobBoard.css';
 
@@ -61,14 +61,14 @@ function AuthenticatedBoard({ userId, authVersion }: { userId: string; authVersi
 
   return <>
     {error && <div className="job-board-feedback" role="alert">
-      <p>{error}</p><button type="button" onClick={refresh}>Retry</button>
+      <p>{error}</p><FancyButton onClick={refresh}>Retry</FancyButton>
     </div>}
     {loading && !data && <p role="status">Checking private access and loading your jobs...</p>}
     {access?.allowed === false && <div className="private-board-access" role="status">
       <h3>Active paid access required</h3>
-      <p>Your administrator must grant access. Expired or revoked access cannot read private jobs.</p>
-      <Link to="/private-jobs/request-access">Request access</Link>
-      <button type="button" onClick={refresh}>Check access again</button>
+      <p>The admin will grant access, once a space opens up.</p>
+      <FancyButton to="/private-jobs/request-access">Request access</FancyButton>
+      <FancyButton onClick={refresh}>Check access again</FancyButton>
     </div>}
     {access?.allowed && <>
       <form className="private-board-discovery" onSubmit={(e) => { e.preventDefault(); void findJobs(); }}>
@@ -78,10 +78,10 @@ function AuthenticatedBoard({ userId, authVersion }: { userId: string; authVersi
             onChange={(e) => setJobTitle(e.target.value as PrivateDiscoveryQuery)} disabled={scan.busy}>
             {PRIVATE_DISCOVERY_PRESETS.map((preset) => <option key={preset.value} value={preset.value}>{preset.label}</option>)}
           </select>
-          <button type="submit" disabled={scan.busy || loading || limited || !jobTitle.trim()}>
+          <FancyButton type="submit" disabled={scan.busy || loading || limited || !jobTitle.trim()}>
             {scan.busy ? 'FINDING YOUR JOBS...' : 'FIND MY JOBS'}
-          </button>
-          <button type="button" disabled={loading} onClick={refresh}>Reload board</button>
+          </FancyButton>
+          <FancyButton disabled={loading} onClick={refresh}>Reload board</FancyButton>
         </div>
         <p>These supported titles keep searches predictable; live vacancies are not guaranteed. The default Frontend + Python preset previously returned jobs in the connectivity test.</p>
         <p>One TheirStack request per 24 hours, on request. Failed attempts also use the allowance. Reloading saved jobs is free.</p>
@@ -111,10 +111,10 @@ function AuthenticatedBoard({ userId, authVersion }: { userId: string; authVersi
               : access.last_status === 'completed'
                 ? 'No jobs were saved by your latest discovery. Live availability varies; check your next discovery time.'
                 : 'No saved jobs yet. Choose a discovery preset and click FIND MY JOBS.'}</p>
-        {(filters.keyword.trim() || filters.freshersOnly) && <button type="button" onClick={() => {
+        {(filters.keyword.trim() || filters.freshersOnly) && <FancyButton onClick={() => {
           setKeyword(''); setFilterPending(false);
           setQuery({ filters: { keyword: '', minRating: 'All', freshersOnly: false, source: 'All' }, page: 1 });
-        }}>Clear filters</button>}
+        }}>Clear filters</FancyButton>}
       </div>}
       <JobCards jobs={data?.jobs ?? []} privateBoard />
     </>}
@@ -126,14 +126,13 @@ export default function PrivateJobBoard() {
   return <section className="job-board private-job-board" aria-label="Your Private Job Board">
     <div className="job-board-heading-row">
       <h2 className="job-board-heading">Private Job Board</h2>
-      <Link to="/" className="private-board-back">Public Job Board</Link>
+      <FancyButton to="/" className="private-board-back">Public Job Board</FancyButton>
     </div>
-    <p>Your personal TheirStack discoveries, visible only to you.</p>
     {!identity.ready ? <p role="status">Checking your session...</p> : !identity.userId
       ? <div className="private-board-access"><h3>Sign in to open PJobB</h3>
         <p>Private jobs are available only to signed-in users with active paid access.</p>
-        <Link to="/terminal">Sign in through Terminal Access</Link>
-        <Link to="/private-jobs/request-access">Request access</Link>
+        <FancyButton to="/terminal">Sign in through Terminal Access</FancyButton>
+        <FancyButton to="/private-jobs/request-access">Request access</FancyButton>
       </div>
       : <AuthenticatedBoard key={identity.userId} userId={identity.userId} authVersion={identity.version} />}
   </section>;

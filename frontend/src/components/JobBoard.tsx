@@ -1,9 +1,12 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
 import { JOB_PAGE_SIZE, useJobPage, type JobFilters } from '../lib/jobCatalog';
 import { useJobRefresh } from '../lib/jobRefresh';
 import { JobCards, JobFilterBar, JobPagination } from './JobBoardView';
+import FancyButton from './FancyButton';
 import './JobBoard.css';
+
+type WashPhase = 'hidden' | 'enter' | 'rise' | 'out';
+type WashSource = 'refresh' | 'page' | 'none';
 
 export default function JobBoard() {
   const [{ filters, page }, setQuery] = useState<{ filters: JobFilters; page: number }>({
@@ -19,28 +22,95 @@ export default function JobBoard() {
     setQuery((current) => ({ filters: { ...current.filters, ...update }, page: 1 }));
   };
 
+  // Sweep wash: the paper sweeps (green for REFRESH, blue for page turns)
+  // bottom-up and returns to white once the settled action completes.
+  const [wash, setWash] = useState<WashPhase>('hidden');
+  const [washSource, setWashSource] = useState<WashSource>('none');
+  // Page turns hold the wash until the sweep finishes rising, matching the
+  // refresh envelope instead of departing the instant the query resolves.
+  const [pageHold, setPageHold] = useState(false);
+  const washTimer = useRef<number | undefined>(undefined);
+  const outTimer = useRef<number | undefined>(undefined);
+  const pageTimer = useRef<number | undefined>(undefined);
+  useEffect(() => () => {
+    window.clearTimeout(washTimer.current);
+    window.clearTimeout(outTimer.current);
+    window.clearTimeout(pageTimer.current);
+  }, []);
+
+  function handleRefreshClick() {
+    window.clearTimeout(washTimer.current);
+    window.clearTimeout(outTimer.current);
+    setWashSource('refresh');
+    setWash('enter');
+    void scraper.startRefresh();
+  }
+
+  function handlePage(next: number) {
+    if (next === page) return onPage(next);
+    window.clearTimeout(washTimer.current);
+    window.clearTimeout(outTimer.current);
+    window.clearTimeout(pageTimer.current);
+    setWashSource('page');
+    setWash('enter');
+    setPageHold(true);
+    pageTimer.current = window.setTimeout(() => setPageHold(false), 2000);
+    onPage(next);
+  }
+
+  useEffect(() => {
+    if (wash !== 'enter') return;
+    const id = window.setTimeout(() => setWash('rise'), 20);
+    return () => window.clearTimeout(id);
+  }, [wash]);
+
+  const flowing = washSource === 'refresh' ? (scraper.busy || scraper.running) : (loading || pageHold);
+  useEffect(() => {
+    if (wash !== 'rise' || flowing) return;
+    const id = window.setTimeout(() => {
+      setWash('out');
+      outTimer.current = window.setTimeout(() => {
+        setWash('hidden');
+        setWashSource('none');
+      }, 1400);
+    }, 350);
+    return () => window.clearTimeout(id);
+  }, [wash, flowing]);
+
+  const washClass = ['refresh-wash']
+    .concat(washSource === 'page' ? ['refresh-wash--blue'] : [])
+    .concat(wash === 'rise' ? ['refresh-wash--rise'] : [])
+    .concat(wash === 'out' ? ['refresh-wash--out'] : [])
+    .join(' ');
+
   return (
     <div className="job-board" aria-busy={loading}>
+      <div className={washClass} aria-hidden="true" />
       <div className="job-board-heading-row">
         <h2 className="job-board-heading">Latest Opportunities</h2>
-        <Link to="/private-jobs" className="job-board-private-link" title="Open your Private Job Board">PJobB</Link>
+        <FancyButton to="/private-jobs" className="job-board-private-link" title="Open your Private Job Board">
+          PJobB
+        </FancyButton>
       </div>
       <JobFilterBar filters={filters} onChange={updateFilters} />
       {error && <div className="job-board-feedback" role="alert">
         <p>{data ? 'Refresh failed. Showing previously loaded results.' : error}</p>
-        <button type="button" onClick={refresh}>Retry</button>
-        {page > 1 && <button type="button" onClick={() => onPage(1)}>First page</button>}
+        <FancyButton onClick={refresh}>Retry</FancyButton>
+        {page > 1 && <FancyButton onClick={() => onPage(1)}>First page</FancyButton>}
       </div>}
       {loading && !data && <div className="job-board-empty"><p>System scanning for new jobs...</p></div>}
-      {loading && data && <p className="job-board-feedback">Refreshing jobs...</p>}
+      {loading && data && washSource !== 'page' && <p className="job-board-feedback">Refreshing jobs...</p>}
       <div className="job-board-actions">
         {(data || page > 1) && <JobPagination page={page} pages={pages} total={total} loading={loading}
-          hasData={Boolean(data)} onPage={onPage} />}
-        <button type="button" className="job-board-refresh" disabled={scraper.checking || scraper.busy || scraper.running}
-          aria-describedby={scraper.message ? 'job-refresh-status' : undefined}
-          onClick={() => { void scraper.startRefresh(); }}>
+          hasData={Boolean(data)} onPage={handlePage} />}
+        <FancyButton
+          className="job-board-refresh"
+          disabled={scraper.checking || scraper.busy || scraper.running}
+          describedBy={scraper.message ? 'job-refresh-status' : undefined}
+          onClick={handleRefreshClick}
+        >
           {scraper.busy ? 'STARTING...' : scraper.running ? 'REFRESHING...' : scraper.checking ? 'CHECKING...' : 'REFRESH'}
-        </button>
+        </FancyButton>
       </div>
       {scraper.message && <p id="job-refresh-status" className="job-board-refresh-status" role={scraper.error ? 'alert' : 'status'}>
         {scraper.message}

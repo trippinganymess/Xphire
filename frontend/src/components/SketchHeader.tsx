@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import FancyButton from './FancyButton';
 import './SketchHeader.css';
 
 export type SystemStatus = 'online' | 'running' | 'completed';
@@ -38,12 +39,20 @@ export default function SketchHeader({
   return (
     <header className="sketch-header">
       {/* ── Left Box: Logo ── */}
-      <Link to="/" className="sketch-header__box sketch-header__logo" title="Xphire Home">
-        <svg width="32" height="32" viewBox="0 0 28 28" fill="none" stroke="#121214" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-          {/* Hand-drawn X / Lightning bolt logo mark */}
-          <path d="M4 4 L14 14 L24 4" />
-          <path d="M4 24 L14 14 L24 24" />
-          <circle cx="14" cy="14" r="3" fill="#121214" />
+      <Link to="/" className="sketch-header__box sketch-header__logo" title="Xphire Home" aria-label="Xphire Home">
+        <svg
+          className="sketch-logo-mark"
+          viewBox="0 0 64 64"
+          role="img"
+          aria-hidden="true"
+          focusable="false"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <rect x="2" y="2" width="60" height="60" rx="15" fill="#0c0d10" />
+          <path
+            d="M32 3 C 33.8 17.8, 46.2 30.2, 61 32 C 46.2 33.8, 33.8 46.2, 32 61 C 30.2 46.2, 17.8 33.8, 3 32 C 17.8 30.2, 30.2 17.8, 32 3 Z"
+            fill="#C0392B"
+          />
         </svg>
       </Link>
 
@@ -125,13 +134,9 @@ export default function SketchHeader({
 
           {onLogout && (
             <div className="sketch-pfp-dropdown">
-              <button
-                type="button"
-                className="sketch-pfp-dropdown-item"
-                onClick={handleSignOut}
-              >
+              <FancyButton compact className="sketch-pfp-dropdown-item" onClick={handleSignOut}>
                 Sign Out
-              </button>
+              </FancyButton>
             </div>
           )}
         </div>

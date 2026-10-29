@@ -39,6 +39,16 @@
 
 .sketch-header__logo {
   cursor: default;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+}
+
+.sketch-logo-mark {
+  width: 100%;
+  height: 100%;
+  display: block;
 }
 
 .sketch-header__pfp {
@@ -86,20 +96,8 @@
 }
 
 .sketch-pfp-dropdown-item {
-  font-family: var(--font-mono);
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--ink-black);
-  padding: 8px 16px;
-  background: none;
-  border: none;
   width: 100%;
-  text-align: left;
-  cursor: pointer;
-}
-
-.sketch-pfp-dropdown-item:hover {
-  background: var(--paper-surface);
+  border-radius: inherit;
 }
 
 .sketch-pfp-img {

@@ -1,4 +1,5 @@
 import type { Job, JobFilters } from '../lib/jobCatalog';
+import FancyButton from './FancyButton';
 
 const RATING_OPTIONS = ['All', '5', '4', '3', '2', '1'];
 
@@ -46,9 +47,9 @@ export function JobPagination({ page, pages, total, loading, hasData, onPage, pr
   onPage: (page: number) => void; privateBoard?: boolean;
 }) {
   return <nav className="job-board-pagination" aria-label={privateBoard ? 'Private job pages' : 'Job pages'}>
-    <button type="button" disabled={page === 1 || loading} onClick={() => onPage(page - 1)}>Previous page</button>
+    <FancyButton compact disabled={page === 1 || loading} ariaLabel="Previous page" onClick={() => onPage(page - 1)}>←</FancyButton>
     <span role="status">{hasData ? `Page ${page} of ${pages} · ${total} jobs` : `Page ${page}`}</span>
-    <button type="button" disabled={page >= pages || loading || !hasData} onClick={() => onPage(page + 1)}>Next page</button>
+    <FancyButton compact disabled={page >= pages || loading || !hasData} ariaLabel="Next page" onClick={() => onPage(page + 1)}>→</FancyButton>
   </nav>;
 }
 

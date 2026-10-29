@@ -112,7 +112,7 @@ test('an old completed run after a dispatch lease expires is not reported as suc
   await expect(page.getByRole('button', { name: 'REFRESHING...' })).toBeDisabled();
   await expect(page.getByText(/Refresh complete/)).toHaveCount(0);
   await page.clock.runFor(30_000);
-  await expect(page.getByRole('alert')).toContainText('Unable to confirm whether the refresh started');
+  await expect(page.locator('#job-refresh-status')).toContainText('Unable to confirm whether the refresh started');
   await expect(page.getByRole('button', { name: 'REFRESH', exact: true })).toBeEnabled();
 });
 

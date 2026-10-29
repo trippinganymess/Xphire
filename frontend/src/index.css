@@ -67,19 +67,19 @@ html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background: var(--paper-bg);
+  background-image:
+    radial-gradient(#E4E4E7 1px, transparent 1px);
+  background-size: 24px 24px;
 }
 
 body {
   font-family: var(--font-hand);
-  background: var(--paper-bg);
+  background: transparent;
   color: var(--ink-black);
   min-height: 100vh;
   display: flex;
   flex-direction: column;
   line-height: 1.5;
-  background-image: 
-    radial-gradient(#E4E4E7 1px, transparent 1px);
-  background-size: 24px 24px;
 }
 
 #root {
@@ -91,6 +91,13 @@ body {
   max-width: 1440px;
   min-width: 320px;
   margin: 0 auto;
+}
+
+/* All headings share the sketch display font used by the board title and header name.
+   Tag-level rule: classed headings (.job-card-title etc.) override it and keep their own look. */
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Bitcount Single', system-ui;
+  font-weight: 400;
 }
 
 /* ── Selection ── */

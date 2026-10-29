@@ -34,6 +34,7 @@ test('equal timestamps use a deterministic tie-breaker across adjacent pages', a
   expect(first.at(-1)).toBe('Unique role 49');
   await page.getByRole('button', { name: 'Next page' }).click();
   await expect(page.getByRole('status')).toContainText('Page 2');
+  await expect(page.getByRole('heading', { name: 'Unique role 48', exact: true })).toBeVisible();
   const second = await page.getByRole('heading', { level: 3 }).allTextContents();
   expect(second[0]).toBe('Unique role 48');
   expect(second.at(-1)).toBe('Unique role 0');
