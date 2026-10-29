@@ -26,9 +26,17 @@ export default function JobBoard() {
   // bottom-up and returns to white once the settled action completes.
   const [wash, setWash] = useState<WashPhase>('hidden');
   const [washSource, setWashSource] = useState<WashSource>('none');
+  // Page turns hold the wash until the sweep finishes rising, matching the
+  // refresh envelope instead of departing the instant the query resolves.
+  const [pageHold, setPageHold] = useState(false);
   const washTimer = useRef<number | undefined>(undefined);
   const outTimer = useRef<number | undefined>(undefined);
-  useEffect(() => () => { window.clearTimeout(washTimer.current); window.clearTimeout(outTimer.current); }, []);
+  const pageTimer = useRef<number | undefined>(undefined);
+  useEffect(() => () => {
+    window.clearTimeout(washTimer.current);
+    window.clearTimeout(outTimer.current);
+    window.clearTimeout(pageTimer.current);
+  }, []);
 
   function handleRefreshClick() {
     window.clearTimeout(washTimer.current);
@@ -42,8 +50,11 @@ export default function JobBoard() {
     if (next === page) return onPage(next);
     window.clearTimeout(washTimer.current);
     window.clearTimeout(outTimer.current);
+    window.clearTimeout(pageTimer.current);
     setWashSource('page');
     setWash('enter');
+    setPageHold(true);
+    pageTimer.current = window.setTimeout(() => setPageHold(false), 2000);
     onPage(next);
   }
 
@@ -53,7 +64,7 @@ export default function JobBoard() {
     return () => window.clearTimeout(id);
   }, [wash]);
 
-  const flowing = washSource === 'refresh' ? (scraper.busy || scraper.running) : loading;
+  const flowing = washSource === 'refresh' ? (scraper.busy || scraper.running) : (loading || pageHold);
   useEffect(() => {
     if (wash !== 'rise' || flowing) return;
     const id = window.setTimeout(() => {
